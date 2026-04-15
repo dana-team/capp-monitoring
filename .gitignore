@@ -1,0 +1,20 @@
+# Binaries
+bin/
+*.exe
+
+# Go build artifacts
+*.o
+*.a
+*.so
+
+# Test output
+*.test
+coverage.out
+
+# Worktrees
+.worktrees/
+
+# Editor
+.idea/
+.vscode/
+*.swp
