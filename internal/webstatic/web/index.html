@@ -38,8 +38,8 @@
         const banner = document.getElementById('overall-banner');
         banner.className = 'banner ' + data.overall;
         banner.textContent = LABELS[data.overall] || data.overall;
-        render('core-list', data.components.filter(c => c.group === 'core'));
-        render('infra-list', data.components.filter(c => c.group === 'infrastructure'));
+        render('core-list', (data.components || []).filter(c => c.group === 'core'));
+        render('infra-list', (data.components || []).filter(c => c.group === 'infrastructure'));
         document.getElementById('last-updated').textContent =
           'Last updated: ' + new Date().toLocaleTimeString();
       } catch (e) {
@@ -48,11 +48,21 @@
     }
 
     function render(id, components) {
-      document.getElementById(id).innerHTML = components.map(c => `
-        <div class="component-row">
-          <span class="component-name">${c.name}</span>
-          <span class="badge ${c.status}">${c.status}${c.message ? ' — ' + c.message : ''}</span>
-        </div>`).join('');
+      const container = document.getElementById(id);
+      container.innerHTML = '';
+      components.forEach(c => {
+        const row = document.createElement('div');
+        row.className = 'component-row';
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'component-name';
+        nameSpan.textContent = c.name;
+        const badge = document.createElement('span');
+        badge.className = 'badge ' + (c.status || 'unknown');
+        badge.textContent = c.status + (c.message ? ' — ' + c.message : '');
+        row.appendChild(nameSpan);
+        row.appendChild(badge);
+        container.appendChild(row);
+      });
     }
 
     refresh();
