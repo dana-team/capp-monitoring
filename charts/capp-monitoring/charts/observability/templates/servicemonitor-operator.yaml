@@ -1,0 +1,25 @@
+{{- if .Values.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ .Release.Name }}-container-app-operator
+  labels: {{ include "observability.labels" . | nindent 4 }}
+  namespace: {{ .Values.operator.namespace }}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: container-app-operator
+  namespaceSelector:
+    matchNames:
+      - {{ .Values.operator.namespace }}
+  endpoints:
+    - port: https
+      path: /metrics
+      interval: {{ .Values.operator.interval }}
+      scheme: https
+      tlsConfig:
+        insecureSkipVerify: true
+      {{- if .Values.operator.bearerTokenAuth }}
+      bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+      {{- end }}
+{{- end }}

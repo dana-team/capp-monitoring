@@ -1,0 +1,33 @@
+enabled: true
+
+backend:
+  namespace: capp-system
+  interval: 30s
+
+operator:
+  namespace: capp-system
+  interval: 30s
+  # The operator uses bearer token auth on its metrics endpoint.
+  # Set to true if your Prometheus has a service account with TokenReview permission.
+  bearerTokenAuth: true
+
+grafana:
+  dashboard:
+    enabled: true
+    # Label that Grafana sidecar watches for dashboard ConfigMaps.
+    # In kube-prometheus-stack default install this is grafana_dashboard: "1"
+    label: grafana_dashboard
+    labelValue: "1"
+    # Namespace where Grafana sidecar watches for ConfigMaps.
+    # Set to "" to use the release namespace.
+    namespace: ""
+  alerts:
+    enabled: true
+    # Label that Grafana sidecar watches for alert rule ConfigMaps.
+    # Requires sidecar.alerts.enabled=true in kube-prometheus-stack.
+    label: grafana_alert
+    labelValue: "1"
+    # UID of your Prometheus datasource in Grafana. Find in Grafana → Datasources.
+    datasourceUid: "prometheus"
+    # Folder name for the alert rules in Grafana.
+    folder: "CAPP"
