@@ -1,0 +1,13 @@
+{{- if and .Values.enabled .Values.grafana.dashboard.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-capp-dashboard
+  namespace: {{ .Values.grafana.dashboard.namespace | default .Release.Namespace }}
+  labels:
+    {{- include "observability.labels" . | nindent 4 }}
+    {{ .Values.grafana.dashboard.label }}: {{ .Values.grafana.dashboard.labelValue | quote }}
+data:
+  capp-monitoring.json: |
+{{ .Files.Get "files/dashboard.json" | indent 4 }}
+{{- end }}
