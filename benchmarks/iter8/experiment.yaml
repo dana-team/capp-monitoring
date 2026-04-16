@@ -1,0 +1,32 @@
+# iter8 SLO experiment for CAPP Knative service
+# Run with: iter8 k launch --set "tasks={ready,http,assess}" \
+#           --set http.url=$TARGET_URL \
+#           --set assess.SLOs.upper.http/latency-mean=200 \
+#           --set assess.SLOs.upper.http/error-rate=0.01 \
+#           --set assess.SLOs.upper.http/latency-p99=500
+# Or deploy as a Kubernetes Job using the values below.
+apiVersion: v2
+kind: Experiment
+metadata:
+  name: capp-slo-experiment
+spec:
+  target: capp-backend
+  strategy:
+    testingPattern: Conformance
+  criteria:
+    objectives:
+      - metric: iter8-system/mean-latency
+        upperLimit: 200     # ms
+      - metric: iter8-system/error-rate
+        upperLimit: 0.01    # 1%
+      - metric: iter8-system/latency-p99
+        upperLimit: 500     # ms
+  duration:
+    intervalSeconds: 20
+    iterationsPerLoop: 5
+  versionInfo:
+    baseline:
+      name: capp-backend
+      variables:
+        - name: url
+          value: "$(TARGET_URL)"
