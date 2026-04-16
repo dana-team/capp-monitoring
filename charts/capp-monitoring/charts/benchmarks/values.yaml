@@ -1,0 +1,30 @@
+enabled: true
+
+image:
+  repository: ghcr.io/dana-team/capp-benchmark-runner
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
+
+# Required: URL of the service to test
+targetUrl: ""
+
+# Required for cold-start test: Knative service name and namespace
+knativeService: ""
+knativeNamespace: capp-system
+
+# Optional: Prometheus remote-write URL for k6 metrics
+prometheus:
+  remoteWriteUrl: ""
+
+# Optional: Prometheus pushgateway URL for cold-start TTFB metric
+pushgatewayUrl: ""
+
+schedule:
+  k6: "0 * * * *"       # hourly at :00
+  iter8: "30 * * * *"   # hourly at :30
+
+# Set to true to create an on-demand Job (in addition to CronJobs)
+job:
+  enabled: false
+  # Which benchmark to run: "k6-latency", "k6-throughput", "cold-start", "iter8"
+  type: "k6-latency"
