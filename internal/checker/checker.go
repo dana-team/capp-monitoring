@@ -41,7 +41,9 @@ type Checker struct {
 }
 
 func New(c client.Client, components []Component, interval time.Duration) *Checker {
-	return &Checker{client: c, components: components, interval: interval}
+	copied := make([]Component, len(components))
+	copy(copied, components)
+	return &Checker{client: c, components: copied, interval: interval}
 }
 
 // Start runs checks immediately then on every interval tick until ctx is cancelled.
@@ -104,7 +106,8 @@ func (c *Checker) checkDeployment(ctx context.Context, comp Component) Result {
 		return Result{Component: comp, Status: StatusDown, Message: "no replicas configured"}
 	}
 	if ready == 0 {
-		return Result{Component: comp, Status: StatusDown, Message: "0/0 replicas ready"}
+		return Result{Component: comp, Status: StatusDown,
+			Message: fmt.Sprintf("0/%d replicas ready", desired)}
 	}
 	if ready < desired {
 		return Result{Component: comp, Status: StatusDegraded,
