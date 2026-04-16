@@ -1,0 +1,61 @@
+{{- if .Values.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "status-page.fullname" . }}
+  labels: {{ include "status-page.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels: {{ include "status-page.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels: {{ include "status-page.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "status-page.fullname" . }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+      containers:
+        - name: status-server
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+          env:
+            - name: PORT
+              value: "8080"
+            - name: NS_CAPP
+              value: {{ .Values.namespaces.capp | quote }}
+            - name: NS_KNATIVE
+              value: {{ .Values.namespaces.knative | quote }}
+            - name: NS_CERT_MANAGER
+              value: {{ .Values.namespaces.certManager | quote }}
+            - name: NS_LOGGING
+              value: {{ .Values.namespaces.logging | quote }}
+            - name: NS_NFSPVC
+              value: {{ .Values.namespaces.nfspvc | quote }}
+            - name: NS_PROVIDER_DNS
+              value: {{ .Values.namespaces.providerDns | quote }}
+          livenessProbe:
+            httpGet:
+              path: /api/status
+              port: 8080
+            initialDelaySeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /api/status
+              port: 8080
+            initialDelaySeconds: 5
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+{{- end }}
