@@ -1,0 +1,44 @@
+# -- Status page sub-chart. Deploys Go status server.
+status-page:
+  enabled: true
+  image:
+    repository: ghcr.io/dana-team/capp-status-server
+    tag: "0.1.0"
+  namespaces:
+    capp: capp-system
+    knative: knative-serving
+    certManager: cert-manager
+    logging: logging-operator
+    nfspvc: nfspvc-operator
+    providerDns: provider-dns
+  serviceMonitor:
+    enabled: true
+
+# -- Observability sub-chart. Deploys ServiceMonitors and Grafana ConfigMaps.
+observability:
+  enabled: true
+  backend:
+    namespace: capp-system
+  operator:
+    namespace: capp-system
+  grafana:
+    dashboard:
+      enabled: true
+    alerts:
+      enabled: true
+      datasourceUid: "prometheus"   # <-- set this to your Grafana Prometheus datasource UID
+
+# -- Benchmarks sub-chart. Deploys k6 and iter8 CronJobs.
+benchmarks:
+  enabled: true
+  image:
+    repository: ghcr.io/dana-team/capp-benchmark-runner
+    tag: "0.1.0"
+  targetUrl: ""          # Required: e.g. http://my-app.capp-system.svc.cluster.local
+  knativeService: ""     # Required: Knative service name for cold-start test
+  knativeNamespace: capp-system
+  prometheus:
+    remoteWriteUrl: ""   # Optional: Prometheus remote-write URL
+  pushgatewayUrl: ""     # Optional: Pushgateway URL for cold-start TTFB metric
+  job:
+    enabled: false
