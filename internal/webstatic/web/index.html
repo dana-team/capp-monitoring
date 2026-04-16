@@ -1,1 +1,62 @@
-<!DOCTYPE html><html><body><h1>CAPP Status</h1></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CAPP Status</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>CAPP Status</h1>
+      <div id="overall-banner" class="banner loading">Checking...</div>
+    </header>
+    <section>
+      <h2>Core Platform</h2>
+      <div id="core-list" class="component-list"></div>
+    </section>
+    <section>
+      <h2>Infrastructure</h2>
+      <div id="infra-list" class="component-list"></div>
+    </section>
+    <footer>
+      <span id="last-updated"></span>
+    </footer>
+  </div>
+  <script>
+    const LABELS = {
+      operational: '● All Systems Operational',
+      degraded: '◐ Partial Degradation',
+      down: '○ Service Disruption',
+    };
+
+    async function refresh() {
+      try {
+        const res = await fetch('/api/status');
+        const data = await res.json();
+        const banner = document.getElementById('overall-banner');
+        banner.className = 'banner ' + data.overall;
+        banner.textContent = LABELS[data.overall] || data.overall;
+        render('core-list', data.components.filter(c => c.group === 'core'));
+        render('infra-list', data.components.filter(c => c.group === 'infrastructure'));
+        document.getElementById('last-updated').textContent =
+          'Last updated: ' + new Date().toLocaleTimeString();
+      } catch (e) {
+        document.getElementById('overall-banner').textContent = 'Unable to reach status API';
+      }
+    }
+
+    function render(id, components) {
+      document.getElementById(id).innerHTML = components.map(c => `
+        <div class="component-row">
+          <span class="component-name">${c.name}</span>
+          <span class="badge ${c.status}">${c.status}${c.message ? ' — ' + c.message : ''}</span>
+        </div>`).join('');
+    }
+
+    refresh();
+    setInterval(refresh, 30000);
+  </script>
+</body>
+</html>
