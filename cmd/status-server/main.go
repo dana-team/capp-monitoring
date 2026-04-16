@@ -5,6 +5,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -55,15 +57,27 @@ func main() {
 
 	chk := checker.New(k8sClient, components, 30*time.Second)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 	go chk.Start(ctx)
 
 	srv := server.New(chk)
+	httpSrv := &http.Server{Addr: ":" + env("PORT", "8080"), Handler: srv}
 
-	addr := ":" + env("PORT", "8080")
-	log.Printf("capp-status-server listening on %s", addr)
-	log.Fatal(http.ListenAndServe(addr, srv))
+	go func() {
+		log.Printf("capp-status-server listening on %s", httpSrv.Addr)
+		if err := httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("server error: %v", err)
+		}
+	}()
+
+	<-ctx.Done()
+	log.Println("shutting down...")
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer shutdownCancel()
+	if err := httpSrv.Shutdown(shutdownCtx); err != nil {
+		log.Printf("shutdown error: %v", err)
+	}
 }
 
 func env(key, fallback string) string {
