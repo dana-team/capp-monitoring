@@ -123,7 +123,11 @@ func (c *Checker) checkNetwork(ctx context.Context, comp NetworkComponent) Resul
 	if err != nil {
 		return Result{Component: comp.Component, Status: StatusDown, Message: err.Error()}
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			fmt.Printf("failed to close response body: %v", err)
+		}
+	}()
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		return Result{Component: comp.Component, Status: StatusOperational}
 	}

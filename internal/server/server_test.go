@@ -72,7 +72,10 @@ func TestHandleStatus_Overall_Down_When_Component_Down(t *testing.T) {
 	srv.ServeHTTP(w, req)
 
 	var resp server.StatusResponse
-	json.Unmarshal(w.Body.Bytes(), &resp)
+	err := json.Unmarshal(w.Body.Bytes(), &resp)
+	if err != nil {
+		t.Fatalf("failed to parse response: %v", err)
+	}
 
 	if resp.Overall != checker.StatusDown {
 		t.Errorf("expected overall=down, got %s", resp.Overall)
