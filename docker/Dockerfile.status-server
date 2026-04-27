@@ -1,0 +1,11 @@
+FROM golang:1.26-alpine AS builder
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -o /capp-status-server ./cmd/status-server
+
+FROM gcr.io/distroless/static:nonroot
+COPY --from=builder /capp-status-server /capp-status-server
+EXPOSE 8080
+ENTRYPOINT ["/capp-status-server"]

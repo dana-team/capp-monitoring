@@ -1,0 +1,19 @@
+{{- if .Values.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ .Release.Name }}-capp-backend
+  labels: {{ include "observability.labels" . | nindent 4 }}
+  namespace: {{ .Values.backend.namespace }}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: capp-backend
+  namespaceSelector:
+    matchNames:
+      - {{ .Values.backend.namespace }}
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: {{ .Values.backend.interval }}
+{{- end }}

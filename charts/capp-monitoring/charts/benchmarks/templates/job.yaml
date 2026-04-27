@@ -1,0 +1,52 @@
+{{- if and .Values.enabled .Values.job.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-benchmark-ondemand-{{ now | unixEpoch }}
+  labels: {{ include "benchmarks.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded,hook-failed
+spec:
+  template:
+    metadata:
+      labels: {{ include "benchmarks.labels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ .Release.Name }}-benchmarks
+      restartPolicy: OnFailure
+      containers:
+        - name: benchmark
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env: {{ include "benchmarks.envVars" . | nindent 12 }}
+          command:
+            - /bin/bash
+            - -c
+            - |
+              case "{{ .Values.job.type }}" in
+                k6-latency)   k6 run /scripts/latency.js ;;
+                k6-throughput) k6 run /scripts/throughput.js ;;
+                cold-start)   bash /scripts/cold-start.sh ;;
+                iter8)
+                  iter8 k launch \
+                    --set "tasks={http,assess}" \
+                    --set http.url="$TARGET_URL" \
+                    --set http.numRequests=200 \
+                    --set assess.SLOs.upper."http/latency-mean"=200 \
+                    --set assess.SLOs.upper."http/error-rate"=0.01 \
+                    --set assess.SLOs.upper."http/latency-p99"=500
+                  iter8 k report
+                  iter8 k assert -c completed -c nofailure -c slos
+                  ;;
+                *) echo "Unknown benchmark type: {{ .Values.job.type }}"; exit 1 ;;
+              esac
+          volumeMounts:
+            - name: scripts
+              mountPath: /scripts
+      volumes:
+        - name: scripts
+          configMap:
+            name: {{ .Release.Name }}-benchmark-scripts
+            defaultMode: 0755
+{{- end }}

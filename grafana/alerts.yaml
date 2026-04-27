@@ -1,0 +1,270 @@
+apiVersion: 1
+groups:
+  - orgId: 1
+    name: capp-slos
+    folder: CAPP
+    interval: 1m
+    rules:
+      - uid: capp-availability-warn
+        title: "CAPP Availability Warning"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 3600, to: 0 }
+            datasourceUid: ${datasource_uid}
+            model:
+              expr: >-
+                1 - (
+                  sum(rate(capp_backend_http_requests_total{status=~"5.."}[1h]))
+                  /
+                  sum(rate(capp_backend_http_requests_total[1h]))
+                )
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: lt, params: [0.999] }
+                  operator: { type: and }
+                  reducer: { type: last }
+              refId: C
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        annotations:
+          summary: "CAPP availability is below 99.9% over the last hour"
+          description: "Availability = {{ $values.A.Value | humanizePercentage }}"
+        labels:
+          severity: warning
+
+      - uid: capp-availability-crit
+        title: "CAPP Availability Critical"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 3600, to: 0 }
+            datasourceUid: ${datasource_uid}
+            model:
+              expr: >-
+                1 - (
+                  sum(rate(capp_backend_http_requests_total{status=~"5.."}[1h]))
+                  /
+                  sum(rate(capp_backend_http_requests_total[1h]))
+                )
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: lt, params: [0.995] }
+                  operator: { type: and }
+                  reducer: { type: last }
+              refId: C
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        annotations:
+          summary: "CAPP availability is critically low (below 99.5%)"
+        labels:
+          severity: critical
+
+      - uid: capp-latency-warn
+        title: "CAPP p99 Latency Warning"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: ${datasource_uid}
+            model:
+              expr: "histogram_quantile(0.99, rate(capp_backend_http_request_duration_seconds_bucket[5m]))"
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [0.5] }
+                  operator: { type: and }
+                  reducer: { type: last }
+              refId: C
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        annotations:
+          summary: "CAPP p99 request latency exceeded 500ms"
+        labels:
+          severity: warning
+
+      - uid: capp-latency-crit
+        title: "CAPP p99 Latency Critical"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: ${datasource_uid}
+            model:
+              expr: "histogram_quantile(0.99, rate(capp_backend_http_request_duration_seconds_bucket[5m]))"
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [1.0] }
+                  operator: { type: and }
+                  reducer: { type: last }
+              refId: C
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        annotations:
+          summary: "CAPP p99 request latency exceeded 1s"
+        labels:
+          severity: critical
+
+      - uid: capp-coldstart-warn
+        title: "CAPP Cold-start p99 Warning"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 3600, to: 0 }
+            datasourceUid: ${datasource_uid}
+            model:
+              expr: "histogram_quantile(0.99, rate(activator_request_latencies_bucket[1h]))"
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [3.0] }
+                  operator: { type: and }
+                  reducer: { type: last }
+              refId: C
+        noDataState: NoData
+        execErrState: Error
+        for: 10m
+        annotations:
+          summary: "Knative cold-start p99 latency exceeded 3s"
+        labels:
+          severity: warning
+
+      - uid: capp-coldstart-crit
+        title: "CAPP Cold-start p99 Critical"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 3600, to: 0 }
+            datasourceUid: ${datasource_uid}
+            model:
+              expr: "histogram_quantile(0.99, rate(activator_request_latencies_bucket[1h]))"
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [8.0] }
+                  operator: { type: and }
+                  reducer: { type: last }
+              refId: C
+        noDataState: NoData
+        execErrState: Error
+        for: 10m
+        annotations:
+          summary: "Knative cold-start p99 latency exceeded 8s"
+        labels:
+          severity: critical
+
+      - uid: capp-autoscaler-warn
+        title: "CAPP Autoscaler Scale Lag Warning"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: ${datasource_uid}
+            model:
+              expr: "max(autoscaler_desired_pods - autoscaler_actual_pods) by (revision_name)"
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [30] }
+                  operator: { type: and }
+                  reducer: { type: last }
+              refId: C
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        annotations:
+          summary: "Knative autoscaler desired pods exceed actual by more than 30 for 5m"
+        labels:
+          severity: warning
+
+      - uid: capp-autoscaler-crit
+        title: "CAPP Autoscaler Scale Lag Critical"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: ${datasource_uid}
+            model:
+              expr: "max(autoscaler_desired_pods - autoscaler_actual_pods) by (revision_name)"
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [60] }
+                  operator: { type: and }
+                  reducer: { type: last }
+              refId: C
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        annotations:
+          summary: "Knative autoscaler scale lag is critically high (>60 pods)"
+        labels:
+          severity: critical
+
+      - uid: capp-component-down
+        title: "CAPP Component Down"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: ${datasource_uid}
+            model:
+              expr: "capp_component_up"
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: lt, params: [1] }
+                  operator: { type: and }
+                  reducer: { type: last }
+              refId: C
+        noDataState: NoData
+        execErrState: Error
+        for: 2m
+        annotations:
+          summary: "CAPP component {{ $labels.component }} is not healthy"
+          description: "Component {{ $labels.component }} (group: {{ $labels.group }}) has been down for 2+ minutes"
+        labels:
+          severity: critical

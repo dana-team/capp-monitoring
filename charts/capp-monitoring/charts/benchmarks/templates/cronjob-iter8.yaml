@@ -1,0 +1,38 @@
+{{- if .Values.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ .Release.Name }}-benchmark-iter8
+  labels: {{ include "benchmarks.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.schedule.iter8 | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels: {{ include "benchmarks.labels" . | nindent 12 }}
+        spec:
+          serviceAccountName: {{ .Release.Name }}-benchmarks
+          restartPolicy: OnFailure
+          containers:
+            - name: iter8
+              image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              env: {{ include "benchmarks.envVars" . | nindent 16 }}
+              command:
+                - /bin/bash
+                - -c
+                - |
+                  iter8 k launch \
+                    --set "tasks={http,assess}" \
+                    --set http.url="$TARGET_URL" \
+                    --set http.numRequests=200 \
+                    --set assess.SLOs.upper."http/latency-mean"=200 \
+                    --set assess.SLOs.upper."http/error-rate"=0.01 \
+                    --set assess.SLOs.upper."http/latency-p99"=500
+                  iter8 k report
+                  iter8 k assert -c completed -c nofailure -c slos
+{{- end }}

@@ -1,0 +1,12 @@
+dependencies:
+- name: status-page
+  repository: ""
+  version: 0.1.0
+- name: observability
+  repository: ""
+  version: 0.1.0
+- name: benchmarks
+  repository: ""
+  version: 0.1.0
+digest: sha256:77c65926053b5b41fea4c97e66cd081633599bec1c85af34b6a578b724481f97
+generated: "2026-04-16T19:58:55.781825626+03:00"

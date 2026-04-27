@@ -1,0 +1,13 @@
+{{- if and .Values.enabled .Values.grafana.alerts.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-capp-alerts
+  namespace: {{ .Values.grafana.alerts.namespace | default .Release.Namespace }}
+  labels:
+    {{- include "observability.labels" . | nindent 4 }}
+    {{ .Values.grafana.alerts.label }}: {{ .Values.grafana.alerts.labelValue | quote }}
+data:
+  capp-alerts.yaml: |
+{{ .Files.Get "files/alerts.yaml" | replace "${datasource_uid}" .Values.grafana.alerts.datasourceUid | indent 4 }}
+{{- end }}

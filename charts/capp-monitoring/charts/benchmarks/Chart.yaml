@@ -1,0 +1,5 @@
+apiVersion: v2
+name: benchmarks
+description: CAPP automated load testing with k6 and iter8
+type: application
+version: 0.1.0

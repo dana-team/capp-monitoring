@@ -1,0 +1,18 @@
+apiVersion: v2
+name: capp-monitoring
+description: >
+  Comprehensive monitoring, alerting, and benchmarking suite for CAPP and Knative.
+  Includes a status page, Grafana observability resources, and automated load tests.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+dependencies:
+  - name: status-page
+    version: "0.1.0"
+    condition: "status-page.enabled"
+  - name: observability
+    version: "0.1.0"
+    condition: "observability.enabled"
+  - name: benchmarks
+    version: "0.1.0"
+    condition: "benchmarks.enabled"

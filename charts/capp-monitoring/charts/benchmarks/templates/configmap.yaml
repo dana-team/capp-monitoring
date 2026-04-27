@@ -1,0 +1,52 @@
+{{- if .Values.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-benchmark-scripts
+  labels: {{ include "benchmarks.labels" . | nindent 4 }}
+data:
+  latency.js: |
+    import http from 'k6/http';
+    import { check, sleep } from 'k6';
+    export const options = {
+      vus: 10, duration: '5m',
+      thresholds: { http_req_duration: ['p(99)<500'], http_req_failed: ['rate<0.01'] },
+    };
+    const BASE_URL = __ENV.TARGET_URL || 'http://localhost:8080';
+    export default function () {
+      const res = http.get(`${BASE_URL}/healthz`);
+      check(res, { 'status 200': (r) => r.status === 200 });
+      sleep(0.1);
+    }
+  throughput.js: |
+    import http from 'k6/http';
+    import { check } from 'k6';
+    export const options = {
+      stages: [
+        { duration: '1m', target: 10 },
+        { duration: '2m', target: 50 },
+        { duration: '2m', target: 100 },
+        { duration: '1m', target: 0 },
+      ],
+      thresholds: { http_req_failed: ['rate<0.05'] },
+    };
+    const BASE_URL = __ENV.TARGET_URL || 'http://localhost:8080';
+    export default function () {
+      const res = http.get(`${BASE_URL}/healthz`);
+      check(res, { 'status 200': (r) => r.status === 200 });
+    }
+  cold-start.sh: |
+    #!/usr/bin/env bash
+    set -euo pipefail
+    kubectl annotate ksvc "$KSVC_NAME" -n "$KSVC_NAMESPACE" \
+      autoscaling.knative.dev/initial-scale=0 autoscaling.knative.dev/min-scale=0 --overwrite
+    sleep 30
+    TTFB=$(curl -o /dev/null -s -w "%{time_starttransfer}" "$TARGET_URL")
+    echo "TTFB: ${TTFB}s"
+    if [[ -n "${PUSHGATEWAY_URL:-}" ]]; then
+      printf "capp_cold_start_ttfb_seconds %s\n" "$TTFB" | \
+        curl --data-binary @- "${PUSHGATEWAY_URL}/metrics/job/capp_cold_start"
+    fi
+    kubectl annotate ksvc "$KSVC_NAME" -n "$KSVC_NAMESPACE" \
+      autoscaling.knative.dev/min-scale=1 --overwrite
+{{- end }}
