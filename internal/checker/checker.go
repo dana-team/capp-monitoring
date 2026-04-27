@@ -58,6 +58,9 @@ func New(c client.Client, hc *http.Client, clusterComponents []ClusterComponent,
 	if hc == nil {
 		hc = &http.Client{Timeout: 5 * time.Second}
 	}
+	if interval <= 0 {
+		interval = 30 * time.Second
+	}
 	return &Checker{client: c, httpClient: hc, clusterComponents: clusterComponents, networkComponents: networkComponents, interval: interval}
 }
 

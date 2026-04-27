@@ -48,7 +48,10 @@ func New(c *checker.Checker) *Server {
 	s := &Server{checker: c, mux: http.NewServeMux(), upGauge: upGauge, reg: reg}
 
 	// Serve embedded HTML/CSS assets
-	sub, _ := fs.Sub(webstatic.Assets, "web")
+	sub, err := fs.Sub(webstatic.Assets, "web")
+	if err != nil {
+		log.Fatalf("server: failed to sub embedded FS: %v", err)
+	}
 	s.mux.Handle("/", http.FileServer(http.FS(sub)))
 	s.mux.HandleFunc("/api/status", s.handleStatus)
 	s.mux.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))

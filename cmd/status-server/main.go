@@ -42,7 +42,7 @@ func main() {
 		{Component: checker.Component{Name: "Knative Serving", Group: checker.CoreGroup},
 			Namespace: env("NS_KNATIVE", "knative-serving"), Deployment: "controller"},
 		{Component: checker.Component{Name: "Container-App-Operator", Group: checker.CoreGroup},
-			Namespace: env("NS_CAPP", "container-app-operator-system"), Deployment: "container-app-operator-controller-manager"},
+			Namespace: env("NS_OPERATOR", "container-app-operator-system"), Deployment: "container-app-operator-controller-manager"},
 		{Component: checker.Component{Name: "cert-manager", Group: checker.InfrastructureGroup},
 			Namespace: env("NS_CERT_MANAGER", "cert-manager"), Deployment: "cert-manager"},
 		{Component: checker.Component{Name: "logging-operator", Group: checker.InfrastructureGroup},
