@@ -28,6 +28,8 @@ spec:
               value: "8080"
             - name: NS_CAPP
               value: {{ .Values.namespaces.capp | quote }}
+            - name: NS_OPERATOR
+              value: {{ .Values.namespaces.operator | quote }}
             - name: NS_KNATIVE
               value: {{ .Values.namespaces.knative | quote }}
             - name: NS_CERT_MANAGER

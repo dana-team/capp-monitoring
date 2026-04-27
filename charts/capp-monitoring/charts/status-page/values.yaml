@@ -12,6 +12,7 @@ service:
 
 namespaces:
   capp: capp-system
+  operator: container-app-operator-system
   knative: knative-serving
   certManager: cert-manager
   logging: logging-operator
