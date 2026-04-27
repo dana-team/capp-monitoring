@@ -2,9 +2,12 @@ package checker_test
 
 import (
 	"context"
+	"errors"
+	"net/http"
 	"testing"
 	"time"
 
+	"github.com/jarcoal/httpmock"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -26,90 +29,216 @@ func newDeployment(name, ns string, desired, ready int32) *appsv1.Deployment {
 	}
 }
 
-func TestCheckOnce_Operational(t *testing.T) {
-	dep := newDeployment("capp-backend", "capp-system", 2, 2)
-	cl := fake.NewClientBuilder().WithScheme(newScheme()).WithObjects(dep).Build()
-
-	comp := checker.Component{
-		Name: "CAPP Backend API", Group: "core",
-		Namespace: "capp-system", Deployment: "capp-backend",
+func TestChecker_ClusterComponents(t *testing.T) {
+	tests := []struct {
+		name        string
+		deployment  *appsv1.Deployment // nil = missing from cluster
+		wantStatus  checker.Status
+		wantMessage string
+	}{
+		{
+			name:       "operational when all replicas ready",
+			deployment: newDeployment("capp-backend", "capp-system", 2, 2),
+			wantStatus: checker.StatusOperational,
+		},
+		{
+			name:        "degraded when some replicas ready",
+			deployment:  newDeployment("capp-backend", "capp-system", 3, 1),
+			wantStatus:  checker.StatusDegraded,
+			wantMessage: "1/3 replicas ready",
+		},
+		{
+			name:        "down when no replicas ready",
+			deployment:  newDeployment("capp-backend", "capp-system", 2, 0),
+			wantStatus:  checker.StatusDown,
+			wantMessage: "0/2 replicas ready",
+		},
+		{
+			name:        "down when zero desired replicas",
+			deployment:  newDeployment("capp-backend", "capp-system", 0, 0),
+			wantStatus:  checker.StatusDown,
+			wantMessage: "no replicas configured",
+		},
+		{
+			name:       "down when deployment missing",
+			deployment: nil,
+			wantStatus: checker.StatusDown,
+		},
 	}
-	c := checker.New(cl, []checker.Component{comp}, time.Second)
-	results := c.CheckOnce(context.Background())
 
-	if len(results) != 1 {
-		t.Fatalf("expected 1 result, got %d", len(results))
-	}
-	if results[0].Status != checker.StatusOperational {
-		t.Errorf("expected operational, got %s: %s", results[0].Status, results[0].Message)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			builder := fake.NewClientBuilder().WithScheme(newScheme())
+			if tt.deployment != nil {
+				builder = builder.WithObjects(tt.deployment)
+			}
+			cl := builder.Build()
+
+			comp := checker.ClusterComponent{
+				Component:  checker.Component{Name: "CAPP Backend API", Group: checker.CoreGroup},
+				Namespace:  "capp-system",
+				Deployment: "capp-backend",
+			}
+			c := checker.New(cl, nil, []checker.ClusterComponent{comp}, nil, time.Second)
+			results := c.CheckOnce(context.Background())
+
+			if len(results) != 1 {
+				t.Fatalf("expected 1 result, got %d", len(results))
+			}
+			if results[0].Status != tt.wantStatus {
+				t.Errorf("status: got %q, want %q (message: %q)", results[0].Status, tt.wantStatus, results[0].Message)
+			}
+			if tt.wantMessage != "" && results[0].Message != tt.wantMessage {
+				t.Errorf("message: got %q, want %q", results[0].Message, tt.wantMessage)
+			}
+		})
 	}
 }
 
-func TestCheckOnce_Degraded(t *testing.T) {
-	dep := newDeployment("capp-backend", "capp-system", 3, 1)
-	cl := fake.NewClientBuilder().WithScheme(newScheme()).WithObjects(dep).Build()
-
-	comp := checker.Component{
-		Name: "CAPP Backend API", Group: "core",
-		Namespace: "capp-system", Deployment: "capp-backend",
+func TestChecker_NetworkComponents(t *testing.T) {
+	tests := []struct {
+		name       string
+		mockStatus int
+		mockErr    error // non-nil = connection failure
+		wantStatus checker.Status
+	}{
+		{
+			name:       "operational on 200",
+			mockStatus: http.StatusOK,
+			wantStatus: checker.StatusOperational,
+		},
+		{
+			name:       "operational on 201",
+			mockStatus: http.StatusCreated,
+			wantStatus: checker.StatusOperational,
+		},
+		{
+			name:       "degraded on 404",
+			mockStatus: http.StatusNotFound,
+			wantStatus: checker.StatusDegraded,
+		},
+		{
+			name:       "degraded on 400",
+			mockStatus: http.StatusBadRequest,
+			wantStatus: checker.StatusDegraded,
+		},
+		{
+			name:       "down on 500",
+			mockStatus: http.StatusInternalServerError,
+			wantStatus: checker.StatusDown,
+		},
+		{
+			name:       "down on connection error",
+			mockErr:    errors.New("connection refused"),
+			wantStatus: checker.StatusDown,
+		},
 	}
-	c := checker.New(cl, []checker.Component{comp}, time.Second)
-	results := c.CheckOnce(context.Background())
 
-	if results[0].Status != checker.StatusDegraded {
-		t.Errorf("expected degraded, got %s", results[0].Status)
+	const target = "http://example.com/health"
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			hc := &http.Client{}
+			httpmock.ActivateNonDefault(hc)
+			defer httpmock.DeactivateAndReset()
+
+			if tt.mockErr != nil {
+				httpmock.RegisterResponder(http.MethodGet, target,
+					httpmock.NewErrorResponder(tt.mockErr))
+			} else {
+				httpmock.RegisterResponder(http.MethodGet, target,
+					httpmock.NewStringResponder(tt.mockStatus, ""))
+			}
+
+			comp := checker.NetworkComponent{
+				Component: checker.Component{Name: "Health Endpoint", Group: checker.CoreGroup},
+				URL:       target,
+			}
+			cl := fake.NewClientBuilder().WithScheme(newScheme()).Build()
+			c := checker.New(cl, hc, nil, []checker.NetworkComponent{comp}, time.Second)
+			results := c.CheckOnce(context.Background())
+
+			if len(results) != 1 {
+				t.Fatalf("expected 1 result, got %d", len(results))
+			}
+			if results[0].Status != tt.wantStatus {
+				t.Errorf("status: got %q, want %q (message: %q)", results[0].Status, tt.wantStatus, results[0].Message)
+			}
+		})
 	}
 }
 
-func TestCheckOnce_Down_Missing(t *testing.T) {
-	cl := fake.NewClientBuilder().WithScheme(newScheme()).Build() // no deployments
+func TestChecker_Mixed(t *testing.T) {
+	const target = "http://example.com/health"
 
-	comp := checker.Component{
-		Name: "CAPP Backend API", Group: "core",
-		Namespace: "capp-system", Deployment: "capp-backend",
+	tests := []struct {
+		name          string
+		deployment    *appsv1.Deployment
+		networkStatus int
+		wantStatuses  []checker.Status // index 0 = cluster, index 1 = network
+	}{
+		{
+			name:          "all operational",
+			deployment:    newDeployment("capp-backend", "capp-system", 1, 1),
+			networkStatus: http.StatusOK,
+			wantStatuses:  []checker.Status{checker.StatusOperational, checker.StatusOperational},
+		},
+		{
+			name:          "cluster down, network operational",
+			deployment:    nil,
+			networkStatus: http.StatusOK,
+			wantStatuses:  []checker.Status{checker.StatusDown, checker.StatusOperational},
+		},
+		{
+			name:          "cluster operational, network degraded",
+			deployment:    newDeployment("capp-backend", "capp-system", 1, 1),
+			networkStatus: http.StatusNotFound,
+			wantStatuses:  []checker.Status{checker.StatusOperational, checker.StatusDegraded},
+		},
+		{
+			name:          "cluster degraded, network down",
+			deployment:    newDeployment("capp-backend", "capp-system", 2, 1),
+			networkStatus: http.StatusInternalServerError,
+			wantStatuses:  []checker.Status{checker.StatusDegraded, checker.StatusDown},
+		},
 	}
-	c := checker.New(cl, []checker.Component{comp}, time.Second)
-	results := c.CheckOnce(context.Background())
 
-	if results[0].Status != checker.StatusDown {
-		t.Errorf("expected down, got %s", results[0].Status)
-	}
-}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			hc := &http.Client{}
+			httpmock.ActivateNonDefault(hc)
+			defer httpmock.DeactivateAndReset()
 
-func TestCheckOnce_Down_NoReplicas(t *testing.T) {
-	dep := newDeployment("capp-backend", "capp-system", 0, 0)
-	cl := fake.NewClientBuilder().WithScheme(newScheme()).WithObjects(dep).Build()
+			httpmock.RegisterResponder(http.MethodGet, target,
+				httpmock.NewStringResponder(tt.networkStatus, ""))
 
-	comp := checker.Component{
-		Name: "CAPP Backend API", Group: "core",
-		Namespace: "capp-system", Deployment: "capp-backend",
-	}
-	c := checker.New(cl, []checker.Component{comp}, time.Second)
-	results := c.CheckOnce(context.Background())
+			builder := fake.NewClientBuilder().WithScheme(newScheme())
+			if tt.deployment != nil {
+				builder = builder.WithObjects(tt.deployment)
+			}
+			cl := builder.Build()
 
-	if results[0].Status != checker.StatusDown {
-		t.Errorf("expected down, got %s", results[0].Status)
-	}
-}
+			clusterComps := []checker.ClusterComponent{
+				{Component: checker.Component{Name: "CAPP Backend", Group: checker.CoreGroup},
+					Namespace: "capp-system", Deployment: "capp-backend"},
+			}
+			networkComps := []checker.NetworkComponent{
+				{Component: checker.Component{Name: "Health Endpoint", Group: checker.CoreGroup},
+					URL: target},
+			}
 
-func TestCheckOnce_MultipleComponents(t *testing.T) {
-	deps := []appsv1.Deployment{
-		*newDeployment("capp-backend", "capp-system", 1, 1),
-		*newDeployment("cert-manager", "cert-manager", 1, 0),
-	}
-	cl := fake.NewClientBuilder().WithScheme(newScheme()).WithObjects(&deps[0], &deps[1]).Build()
+			c := checker.New(cl, hc, clusterComps, networkComps, time.Second)
+			results := c.CheckOnce(context.Background())
 
-	components := []checker.Component{
-		{Name: "CAPP Backend", Group: "core", Namespace: "capp-system", Deployment: "capp-backend"},
-		{Name: "cert-manager", Group: "infrastructure", Namespace: "cert-manager", Deployment: "cert-manager"},
-	}
-	c := checker.New(cl, components, time.Second)
-	results := c.CheckOnce(context.Background())
-
-	if results[0].Status != checker.StatusOperational {
-		t.Errorf("backend: expected operational, got %s", results[0].Status)
-	}
-	if results[1].Status != checker.StatusDown {
-		t.Errorf("cert-manager: expected down, got %s", results[1].Status)
+			if len(results) != 2 {
+				t.Fatalf("expected 2 results, got %d", len(results))
+			}
+			for i, want := range tt.wantStatuses {
+				if results[i].Status != want {
+					t.Errorf("results[%d] (%s): got %q, want %q (message: %q)",
+						i, results[i].Component.Name, results[i].Status, want, results[i].Message)
+				}
+			}
+		})
 	}
 }

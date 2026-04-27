@@ -27,10 +27,10 @@ func newTestServer(t *testing.T, deps ...*appsv1.Deployment) *server.Server {
 	}
 	cl := builder.Build()
 
-	components := []checker.Component{
-		{Name: "CAPP Backend API", Group: "core", Namespace: "capp-system", Deployment: "capp-backend"},
+	components := []checker.ClusterComponent{
+		{Component: checker.Component{Name: "CAPP Backend API", Group: "core"}, Namespace: "capp-system", Deployment: "capp-backend"},
 	}
-	chk := checker.New(cl, components, time.Second)
+	chk := checker.New(cl, nil, components, nil, time.Second)
 	return server.New(chk)
 }
 

@@ -1,7 +1,7 @@
 FROM registry.access.redhat.com/ubi9/ubi-minimal
 
 RUN microdnf install -y \
-    wget tar gzip curl jq bash \
+    wget tar gzip jq bash \
     && microdnf clean all
 
 WORKDIR /tmp/build
@@ -26,8 +26,9 @@ RUN curl -sSL -o vegeta.tgz \
     && chmod +x /usr/local/bin/vegeta
 
 # iter8 CLI
-RUN curl -sSL https://iter8.tools/install.sh | ITER8_VERSION=0.17.3 bash \
-    && mv iter8 /usr/local/bin/iter8
+RUN curl -sSL -o /usr/local/bin/iter8 \
+    https://github.com/iter8-tools/iter8/releases/download/v0.17.3/iter8-linux-amd64 \
+    && chmod +x /usr/local/bin/iter8
 
 # kubectl (for cold-start scale-to-zero)
 RUN curl -sSL -o /usr/local/bin/kubectl \

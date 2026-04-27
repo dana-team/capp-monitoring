@@ -3,6 +3,7 @@ package checker
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"sync"
 	"time"
 
@@ -14,16 +15,27 @@ import (
 type Status string
 
 const (
-	StatusOperational Status = "operational"
-	StatusDegraded    Status = "degraded"
-	StatusDown        Status = "down"
+	StatusOperational   Status = "operational"
+	StatusDegraded      Status = "degraded"
+	StatusDown          Status = "down"
+	CoreGroup                  = "core"
+	InfrastructureGroup        = "infrastructure"
 )
 
 type Component struct {
-	Name       string
-	Group      string // "core" or "infrastructure"
+	Name  string
+	Group string
+}
+
+type ClusterComponent struct {
+	Component
 	Namespace  string
 	Deployment string
+}
+
+type NetworkComponent struct {
+	Component
+	URL string
 }
 
 type Result struct {
@@ -33,17 +45,20 @@ type Result struct {
 }
 
 type Checker struct {
-	client     client.Client
-	components []Component
-	cache      []Result
-	mu         sync.RWMutex
-	interval   time.Duration
+	client            client.Client
+	httpClient        *http.Client
+	networkComponents []NetworkComponent
+	clusterComponents []ClusterComponent
+	cache             []Result
+	mu                sync.RWMutex
+	interval          time.Duration
 }
 
-func New(c client.Client, components []Component, interval time.Duration) *Checker {
-	copied := make([]Component, len(components))
-	copy(copied, components)
-	return &Checker{client: c, components: copied, interval: interval}
+func New(c client.Client, hc *http.Client, clusterComponents []ClusterComponent, networkComponents []NetworkComponent, interval time.Duration) *Checker {
+	if hc == nil {
+		hc = &http.Client{Timeout: 5 * time.Second}
+	}
+	return &Checker{client: c, httpClient: hc, clusterComponents: clusterComponents, networkComponents: networkComponents, interval: interval}
 }
 
 // Start runs checks immediately then on every interval tick until ctx is cancelled.
@@ -77,13 +92,20 @@ func (c *Checker) Results() []Result {
 }
 
 func (c *Checker) runChecks(ctx context.Context) {
-	results := make([]Result, len(c.components))
+	results := make([]Result, len(c.clusterComponents)+len(c.networkComponents))
 	var wg sync.WaitGroup
-	for i, comp := range c.components {
+	for i, comp := range c.clusterComponents {
 		wg.Add(1)
-		go func(i int, comp Component) {
+		go func(i int, comp ClusterComponent) {
 			defer wg.Done()
 			results[i] = c.checkDeployment(ctx, comp)
+		}(i, comp)
+	}
+	for i, comp := range c.networkComponents {
+		wg.Add(1)
+		go func(i int, comp NetworkComponent) {
+			defer wg.Done()
+			results[i+len(c.clusterComponents)] = c.checkNetwork(ctx, comp)
 		}(i, comp)
 	}
 	wg.Wait()
@@ -92,26 +114,47 @@ func (c *Checker) runChecks(ctx context.Context) {
 	c.mu.Unlock()
 }
 
-func (c *Checker) checkDeployment(ctx context.Context, comp Component) Result {
+func (c *Checker) checkNetwork(ctx context.Context, comp NetworkComponent) Result {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, comp.URL, nil)
+	if err != nil {
+		return Result{Component: comp.Component, Status: StatusDown, Message: "invalid URL: " + err.Error()}
+	}
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return Result{Component: comp.Component, Status: StatusDown, Message: err.Error()}
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		return Result{Component: comp.Component, Status: StatusOperational}
+	}
+	if resp.StatusCode >= 500 {
+		return Result{Component: comp.Component, Status: StatusDown,
+			Message: fmt.Sprintf("HTTP %d", resp.StatusCode)}
+	}
+	return Result{Component: comp.Component, Status: StatusDegraded,
+		Message: fmt.Sprintf("HTTP %d", resp.StatusCode)}
+}
+
+func (c *Checker) checkDeployment(ctx context.Context, comp ClusterComponent) Result {
 	var dep appsv1.Deployment
 	if err := c.client.Get(ctx, types.NamespacedName{
 		Name:      comp.Deployment,
 		Namespace: comp.Namespace,
 	}, &dep); err != nil {
-		return Result{Component: comp, Status: StatusDown, Message: err.Error()}
+		return Result{Component: comp.Component, Status: StatusDown, Message: err.Error()}
 	}
 	desired := dep.Status.Replicas
 	ready := dep.Status.ReadyReplicas
 	if desired == 0 {
-		return Result{Component: comp, Status: StatusDown, Message: "no replicas configured"}
+		return Result{Component: comp.Component, Status: StatusDown, Message: "no replicas configured"}
 	}
 	if ready == 0 {
-		return Result{Component: comp, Status: StatusDown,
+		return Result{Component: comp.Component, Status: StatusDown,
 			Message: fmt.Sprintf("0/%d replicas ready", desired)}
 	}
 	if ready < desired {
-		return Result{Component: comp, Status: StatusDegraded,
+		return Result{Component: comp.Component, Status: StatusDegraded,
 			Message: fmt.Sprintf("%d/%d replicas ready", ready, desired)}
 	}
-	return Result{Component: comp, Status: StatusOperational}
+	return Result{Component: comp.Component, Status: StatusOperational}
 }
