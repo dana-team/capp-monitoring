@@ -1,0 +1,37 @@
+{{- if and .Values.enabled .Values.testCapp.enabled }}
+# Test Capp — the system-under-test the scale benchmark drives load against.
+# Deployed into the release namespace alongside the benchmark tooling.
+apiVersion: rcs.dana.io/v1alpha1
+kind: Capp
+metadata:
+  name: {{ .Values.testCapp.name }}
+  namespace: {{ .Values.testCapp.namespace | default .Release.Namespace }}
+  labels: {{ include "benchmarks.labels" . | nindent 4 }}
+spec:
+  state: enabled
+  # Capp-native autoscaling. The target value (concurrency per pod) is taken from
+  # the cluster CappConfig (default 10), not set here. minReplicas=0 keeps
+  # scale-to-zero; the operator then sets activation-scale from CappConfig.
+  scaleSpec:
+    metric: {{ .Values.testCapp.metric | quote }}
+    minReplicas: {{ .Values.testCapp.minReplicas }}
+  configurationSpec:
+    template:
+      {{- if .Values.testCapp.initialScale }}
+      metadata:
+        annotations:
+          # Create the Capp with no pods so the first request is a genuine cold start.
+          # initial-scale "0" requires Knative allow-zero-initial-scale=true in
+          # config-autoscaler; if that's off, set initialScale to "1" instead.
+          autoscaling.knative.dev/initial-scale: {{ .Values.testCapp.initialScale | quote }}
+      {{- end }}
+      spec:
+        containers:
+          - name: {{ .Values.testCapp.name }}
+            image: {{ .Values.testCapp.image | quote }}
+            {{- with .Values.testCapp.command }}
+            command: {{ toYaml . | nindent 14 }}
+            {{- end }}
+            ports:
+              - containerPort: {{ .Values.testCapp.port }}
+{{- end }}

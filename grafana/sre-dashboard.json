@@ -1,0 +1,260 @@
+{
+  "title": "CAPP SRE — Knative Autoscaling",
+  "uid": "capp-sre-autoscaling",
+  "description": "Knative autoscaling SLOs for CAPP: cold-start, time-to-scale, scale-delay and scale-lag from the scale benchmark (pushed to VictoriaMetrics), plus live autoscaler/activator metrics.",
+  "tags": ["capp", "knative", "slo", "sre", "autoscaling"],
+  "style": "dark",
+  "editable": true,
+  "graphTooltip": 1,
+  "schemaVersion": 39,
+  "time": { "from": "now-6h", "to": "now" },
+  "refresh": "30s",
+  "links": [],
+  "annotations": { "list": [] },
+  "templating": {
+    "list": [
+      {
+        "name": "ds",
+        "label": "Data source",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": {},
+        "hide": 0
+      },
+      {
+        "name": "capp",
+        "label": "Capp",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "${ds}" },
+        "query": "label_values(capp_scale_test_success, capp)",
+        "includeAll": true,
+        "multi": true,
+        "current": { "text": "All", "value": "$__all" },
+        "refresh": 2,
+        "sort": 1
+      }
+    ]
+  },
+  "panels": [
+    { "id": 100, "type": "row", "title": "SLO summary", "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 } },
+
+    {
+      "id": 1, "type": "stat", "title": "Cold-start p95 (7d)",
+      "datasource": { "type": "prometheus", "uid": "${ds}" },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 1 },
+      "fieldConfig": { "defaults": {
+        "unit": "s", "decimals": 2,
+        "thresholds": { "mode": "absolute", "steps": [
+          { "color": "green", "value": null }, { "color": "yellow", "value": 3 }, { "color": "red", "value": 8 } ] }
+      } },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "area", "textMode": "value" },
+      "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "${ds}" }, "expr": "max(quantile_over_time(0.95, capp_cold_start_seconds{capp=~\"$capp\"}[7d]))" } ]
+    },
+    {
+      "id": 2, "type": "stat", "title": "Time-to-scale p95 (7d)",
+      "datasource": { "type": "prometheus", "uid": "${ds}" },
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 1 },
+      "fieldConfig": { "defaults": {
+        "unit": "s", "decimals": 1,
+        "thresholds": { "mode": "absolute", "steps": [
+          { "color": "green", "value": null }, { "color": "yellow", "value": 30 }, { "color": "red", "value": 60 } ] }
+      } },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "area", "textMode": "value" },
+      "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "${ds}" }, "expr": "max(quantile_over_time(0.95, capp_time_to_scale_seconds{capp=~\"$capp\"}[7d]))" } ]
+    },
+    {
+      "id": 3, "type": "stat", "title": "Scale-delay p95 (7d)",
+      "datasource": { "type": "prometheus", "uid": "${ds}" },
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 1 },
+      "fieldConfig": { "defaults": {
+        "unit": "s", "decimals": 2,
+        "thresholds": { "mode": "absolute", "steps": [
+          { "color": "green", "value": null }, { "color": "yellow", "value": 10 }, { "color": "red", "value": 30 } ] }
+      } },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "area", "textMode": "value" },
+      "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "${ds}" }, "expr": "max(quantile_over_time(0.95, capp_scale_delay_seconds{capp=~\"$capp\"}[7d]))" } ]
+    },
+    {
+      "id": 4, "type": "stat", "title": "Scale-test success (7d)",
+      "datasource": { "type": "prometheus", "uid": "${ds}" },
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 1 },
+      "fieldConfig": { "defaults": {
+        "unit": "percentunit", "min": 0, "max": 1, "decimals": 1,
+        "thresholds": { "mode": "absolute", "steps": [
+          { "color": "red", "value": null }, { "color": "yellow", "value": 0.9 }, { "color": "green", "value": 0.99 } ] }
+      } },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "area", "textMode": "value" },
+      "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "${ds}" }, "expr": "avg(avg_over_time(capp_scale_test_success{capp=~\"$capp\"}[7d]))" } ]
+    },
+    {
+      "id": 5, "type": "stat", "title": "Pods (actual, now)",
+      "datasource": { "type": "prometheus", "uid": "${ds}" },
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 1 },
+      "fieldConfig": { "defaults": {
+        "unit": "short", "decimals": 0,
+        "color": { "mode": "fixed", "fixedColor": "blue" },
+        "thresholds": { "mode": "absolute", "steps": [ { "color": "blue", "value": null } ] }
+      } },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area", "textMode": "value" },
+      "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "${ds}" }, "expr": "sum(autoscaler_actual_pods{configuration_name=~\"$capp\"})" } ]
+    },
+    {
+      "id": 6, "type": "stat", "title": "Scale lag (now)",
+      "datasource": { "type": "prometheus", "uid": "${ds}" },
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 1 },
+      "fieldConfig": { "defaults": {
+        "unit": "short", "decimals": 0,
+        "thresholds": { "mode": "absolute", "steps": [
+          { "color": "green", "value": null }, { "color": "yellow", "value": 30 }, { "color": "red", "value": 60 } ] }
+      } },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "area", "textMode": "value" },
+      "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "${ds}" }, "expr": "sum(autoscaler_desired_pods{configuration_name=~\"$capp\"} - autoscaler_actual_pods{configuration_name=~\"$capp\"})" } ]
+    },
+
+    { "id": 101, "type": "row", "title": "Autoscaling behavior", "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 } },
+
+    {
+      "id": 10, "type": "timeseries", "title": "Desired vs Actual pods",
+      "datasource": { "type": "prometheus", "uid": "${ds}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+      "fieldConfig": { "defaults": {
+        "unit": "short", "color": { "mode": "palette-classic" },
+        "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "lineWidth": 2, "fillOpacity": 18, "gradientMode": "opacity", "showPoints": "never", "spanNulls": true, "stacking": { "mode": "none" } }
+      } },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [
+        { "refId": "A", "datasource": { "type": "prometheus", "uid": "${ds}" }, "legendFormat": "desired — {{configuration_name}}", "expr": "sum by (configuration_name) (autoscaler_desired_pods{configuration_name=~\"$capp\"})" },
+        { "refId": "B", "datasource": { "type": "prometheus", "uid": "${ds}" }, "legendFormat": "actual — {{configuration_name}}", "expr": "sum by (configuration_name) (autoscaler_actual_pods{configuration_name=~\"$capp\"})" }
+      ]
+    },
+    {
+      "id": 11, "type": "timeseries", "title": "Scale lag (desired − actual)",
+      "datasource": { "type": "prometheus", "uid": "${ds}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+      "fieldConfig": { "defaults": {
+        "unit": "short", "color": { "mode": "palette-classic" },
+        "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "lineWidth": 2, "fillOpacity": 15, "gradientMode": "opacity", "showPoints": "never", "spanNulls": true, "thresholdsStyle": { "mode": "dashed" } },
+        "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "yellow", "value": 30 }, { "color": "red", "value": 60 } ] }
+      } },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "${ds}" }, "legendFormat": "{{configuration_name}}", "expr": "sum by (configuration_name) (autoscaler_desired_pods{configuration_name=~\"$capp\"} - autoscaler_actual_pods{configuration_name=~\"$capp\"})" } ]
+    },
+    {
+      "id": 12, "type": "timeseries", "title": "Request concurrency vs target",
+      "description": "Observed stable concurrency vs the autoscaler target. Empty if these autoscaler_* series aren't exported by your Knative build.",
+      "datasource": { "type": "prometheus", "uid": "${ds}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 14 },
+      "fieldConfig": { "defaults": {
+        "unit": "short", "color": { "mode": "palette-classic" },
+        "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "lineWidth": 2, "fillOpacity": 12, "gradientMode": "opacity", "showPoints": "never", "spanNulls": true }
+      } },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [
+        { "refId": "A", "datasource": { "type": "prometheus", "uid": "${ds}" }, "legendFormat": "concurrency — {{configuration_name}}", "expr": "sum by (configuration_name) (autoscaler_stable_request_concurrency{configuration_name=~\"$capp\"})" },
+        { "refId": "B", "datasource": { "type": "prometheus", "uid": "${ds}" }, "legendFormat": "target — {{configuration_name}}", "expr": "max by (configuration_name) (autoscaler_target_concurrency{configuration_name=~\"$capp\"})" }
+      ]
+    },
+    {
+      "id": 13, "type": "state-timeline", "title": "Autoscaler panic mode",
+      "description": "1 = autoscaler in panic mode. Empty if autoscaler_panic_mode isn't exported.",
+      "datasource": { "type": "prometheus", "uid": "${ds}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 14 },
+      "fieldConfig": { "defaults": {
+        "color": { "mode": "thresholds" },
+        "custom": { "fillOpacity": 80, "lineWidth": 0 },
+        "mappings": [ { "type": "value", "options": { "0": { "text": "stable", "color": "green" }, "1": { "text": "PANIC", "color": "red" } } } ],
+        "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "red", "value": 1 } ] }
+      } },
+      "options": { "mergeValues": true, "showValue": "auto", "alignValue": "center", "rowHeight": 0.9, "legend": { "displayMode": "list", "placement": "bottom" } },
+      "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "${ds}" }, "legendFormat": "{{configuration_name}}", "expr": "max by (configuration_name) (autoscaler_panic_mode{configuration_name=~\"$capp\"})" } ]
+    },
+
+    { "id": 102, "type": "row", "title": "Cold-start & scale timing (per benchmark run)", "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 22 } },
+
+    {
+      "id": 20, "type": "timeseries", "title": "Cold-start latency — synthetic vs activator p99",
+      "description": "Synthetic TTFB is the trustworthy 0→N cold-start (seconds). Activator p99 is converted from ms to s.",
+      "datasource": { "type": "prometheus", "uid": "${ds}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 23 },
+      "fieldConfig": { "defaults": {
+        "unit": "s", "color": { "mode": "palette-classic" },
+        "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "lineWidth": 2, "fillOpacity": 15, "gradientMode": "opacity", "showPoints": "auto", "pointSize": 6, "spanNulls": false }
+      } },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max", "mean"] }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [
+        { "refId": "A", "datasource": { "type": "prometheus", "uid": "${ds}" }, "legendFormat": "synthetic TTFB — {{capp}}", "expr": "capp_cold_start_seconds{capp=~\"$capp\"}" },
+        { "refId": "B", "datasource": { "type": "prometheus", "uid": "${ds}" }, "legendFormat": "activator p99", "expr": "histogram_quantile(0.99, sum(rate(activator_request_latencies_bucket{configuration_name=~\"$capp\"}[5m])) by (le)) / 1000" }
+      ]
+    },
+    {
+      "id": 21, "type": "timeseries", "title": "Time-to-scale & scale-delay (per run)",
+      "datasource": { "type": "prometheus", "uid": "${ds}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 23 },
+      "fieldConfig": { "defaults": {
+        "unit": "s", "color": { "mode": "palette-classic" },
+        "custom": { "drawStyle": "points", "pointSize": 8, "lineWidth": 1, "fillOpacity": 0, "showPoints": "always", "spanNulls": false }
+      } },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max", "mean"] }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [
+        { "refId": "A", "datasource": { "type": "prometheus", "uid": "${ds}" }, "legendFormat": "time-to-scale — {{capp}}", "expr": "capp_time_to_scale_seconds{capp=~\"$capp\"}" },
+        { "refId": "B", "datasource": { "type": "prometheus", "uid": "${ds}" }, "legendFormat": "scale-delay — {{capp}}", "expr": "capp_scale_delay_seconds{capp=~\"$capp\"}" }
+      ]
+    },
+    {
+      "id": 22, "type": "state-timeline", "title": "Scale-test outcomes",
+      "datasource": { "type": "prometheus", "uid": "${ds}" },
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 31 },
+      "fieldConfig": { "defaults": {
+        "color": { "mode": "thresholds" },
+        "custom": { "fillOpacity": 85, "lineWidth": 0 },
+        "mappings": [ { "type": "value", "options": { "0": { "text": "FAIL", "color": "red" }, "1": { "text": "OK", "color": "green" } } } ],
+        "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ] }
+      } },
+      "options": { "mergeValues": true, "showValue": "auto", "alignValue": "center", "rowHeight": 0.9, "legend": { "displayMode": "list", "placement": "bottom" } },
+      "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "${ds}" }, "legendFormat": "{{capp}}", "expr": "capp_scale_test_success{capp=~\"$capp\"}", "range": true, "instant": false } ]
+    },
+
+    { "id": 103, "type": "row", "title": "Traffic & latency (activator)", "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 37 } },
+
+    {
+      "id": 30, "type": "timeseries", "title": "Request rate by response class",
+      "description": "From activator_request_count. Empty if the metric/response_code_class label isn't present.",
+      "datasource": { "type": "prometheus", "uid": "${ds}" },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 38 },
+      "fieldConfig": { "defaults": {
+        "unit": "reqps", "color": { "mode": "palette-classic" },
+        "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "lineWidth": 2, "fillOpacity": 25, "gradientMode": "opacity", "showPoints": "never", "spanNulls": true, "stacking": { "mode": "normal" } }
+      } },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull"] }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "${ds}" }, "legendFormat": "{{response_code_class}}", "expr": "sum by (response_code_class) (rate(activator_request_count{configuration_name=~\"$capp\"}[5m]))" } ]
+    },
+    {
+      "id": 31, "type": "timeseries", "title": "Error rate (5xx)",
+      "datasource": { "type": "prometheus", "uid": "${ds}" },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 38 },
+      "fieldConfig": { "defaults": {
+        "unit": "percentunit", "min": 0, "color": { "mode": "palette-classic" },
+        "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "lineWidth": 2, "fillOpacity": 20, "gradientMode": "opacity", "showPoints": "never", "spanNulls": true },
+        "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "yellow", "value": 0.001 }, { "color": "red", "value": 0.005 } ] }
+      } },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "calcs": [] }, "tooltip": { "mode": "single" } },
+      "targets": [ { "refId": "A", "datasource": { "type": "prometheus", "uid": "${ds}" }, "legendFormat": "5xx ratio", "expr": "sum(rate(activator_request_count{configuration_name=~\"$capp\", response_code_class=\"5xx\"}[5m])) / clamp_min(sum(rate(activator_request_count{configuration_name=~\"$capp\"}[5m])), 1)" } ]
+    },
+    {
+      "id": 32, "type": "timeseries", "title": "Activator latency p50 / p95 / p99",
+      "description": "histogram_quantile over activator_request_latencies_bucket, converted ms→s.",
+      "datasource": { "type": "prometheus", "uid": "${ds}" },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 38 },
+      "fieldConfig": { "defaults": {
+        "unit": "s", "color": { "mode": "palette-classic" },
+        "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "lineWidth": 2, "fillOpacity": 10, "gradientMode": "opacity", "showPoints": "never", "spanNulls": true }
+      } },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [
+        { "refId": "A", "datasource": { "type": "prometheus", "uid": "${ds}" }, "legendFormat": "p50", "expr": "histogram_quantile(0.50, sum(rate(activator_request_latencies_bucket{configuration_name=~\"$capp\"}[5m])) by (le)) / 1000" },
+        { "refId": "B", "datasource": { "type": "prometheus", "uid": "${ds}" }, "legendFormat": "p95", "expr": "histogram_quantile(0.95, sum(rate(activator_request_latencies_bucket{configuration_name=~\"$capp\"}[5m])) by (le)) / 1000" },
+        { "refId": "C", "datasource": { "type": "prometheus", "uid": "${ds}" }, "legendFormat": "p99", "expr": "histogram_quantile(0.99, sum(rate(activator_request_latencies_bucket{configuration_name=~\"$capp\"}[5m])) by (le)) / 1000" }
+      ]
+    }
+  ]
+}

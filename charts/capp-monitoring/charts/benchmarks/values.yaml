@@ -12,12 +12,66 @@ targetUrl: ""
 knativeService: ""
 knativeNamespace: capp-system
 
-# Optional: Prometheus remote-write URL for k6 metrics
+# Optional: Prometheus remote-write URL for k6 metrics (point at VictoriaMetrics, e.g.
+# http://vmsingle-<release>.<ns>.svc:8429/api/v1/write).
 prometheus:
   remoteWriteUrl: ""
 
-# Optional: Prometheus pushgateway URL for cold-start TTFB metric
+# Optional: Prometheus pushgateway URL for cold-start TTFB metric.
 pushgatewayUrl: ""
+
+# VictoriaMetrics import endpoint (base URL) for pushing synthetic scale metrics,
+# e.g. http://vmsingle-<release>.<ns>.svc:8429 . The scale-test appends
+# /api/v1/import/prometheus. Leave empty to skip the push.
+victoriametrics:
+  importUrl: ""
+
+# Test Capp — the system-under-test for the scale benchmark.
+testCapp:
+  enabled: true
+  name: capp-slo-test
+  # Defaults to the release namespace (same as the benchmark tooling).
+  namespace: ""
+  # A delay-capable HTTP image, so the load can hold requests open and drive the
+  # concurrency the autoscaler measures. Configurable for air-gapped registries.
+  image: mccutchen/go-httpbin:v2.15.0
+  port: 8080
+  command: []          # empty = use the image's default entrypoint
+  # Path the load test hits. /delay/N holds each request ~N seconds, so in-flight
+  # concurrency ≈ k6 VUs. With CappConfig target 10/pod, VUs/10 ≈ desired pods.
+  loadPath: "/delay/0.5"
+  # Maps to spec.scaleSpec. The concurrency target is fixed by the cluster
+  # CappConfig (default 10/pod) and is NOT settable per-Capp.
+  metric: concurrency
+  minReplicas: 0       # keep scale-to-zero so cold-start can be measured
+  # Initial replica count at creation. "0" = no pod on create (genuine cold start),
+  # but requires Knative allow-zero-initial-scale=true. If that's not permitted on
+  # the cluster, set this to "1" (the harness then waits for idle scale-to-zero).
+  initialScale: "0"
+
+# Scale-behaviour benchmark settings.
+scale:
+  enabled: true
+  schedule: "15 * * * *"   # hourly at :15
+  # Set true to spawn an immediate one-shot scale Job on install/upgrade (in
+  # addition to the CronJob) — for testing without waiting for the schedule.
+  # The Job self-deletes via ttlSecondsAfterFinished. Toggle back to false after.
+  oneshot: false
+  targetPods: 5            # pod count used for the time-to-scale milestone
+  loadVUs: 100             # k6 virtual users (drive concurrency past `testCapp.target`)
+  loadDuration: "3m"
+  timeoutSeconds: 180      # max wait for scale-out before marking the run failed
+  zeroWaitSeconds: 180     # max wait for idle scale-to-zero before the cold-start check
+
+# Legacy benchmarks (k6 latency + cold-start.sh cron, and the iter8 cron).
+# DISABLED by default: they send sustained traffic to the same test Capp, which
+# keeps it warm so the scale test never sees zero pods (cold-start -> NaN) and
+# the autoscaling baseline is polluted. Enable only if you point them at a
+# DIFFERENT target than the scale test's Capp.
+k6:
+  enabled: false
+iter8:
+  enabled: false
 
 schedule:
   k6: "0 * * * *"       # hourly at :00

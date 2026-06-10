@@ -1,0 +1,39 @@
+# Air-gapped OpenShift values for the Knative autoscaling SLO suite.
+# Only the benchmarks sub-chart is needed for this goal (test Capp + scale benchmark).
+# Replace <REGISTRY> and <VM_INSERT> before installing. See docs/RUNBOOK-victoriametrics.md.
+#
+# <VM_INSERT> = the VictoriaMetrics cluster *ingest* URL from the monitoring team,
+#   e.g. http://<vminsert>:8480/insert/0:0/prometheus
+#   (remote-write appends /api/v1/write; the import push appends /api/v1/import/prometheus)
+
+status-page:
+  enabled: false
+
+observability:
+  enabled: false
+
+benchmarks:
+  enabled: true
+  image:
+    repository: <REGISTRY>/capp-benchmark-runner
+    tag: "0.2.0"
+  # k6 load metrics → VictoriaMetrics remote-write endpoint
+  prometheus:
+    remoteWriteUrl: "<VM_INSERT>/api/v1/write"
+  # synthetic scale metrics → VictoriaMetrics import endpoint (base; script appends the path)
+  victoriametrics:
+    importUrl: "<VM_INSERT>"
+  testCapp:
+    enabled: true
+    # delay-capable workload (busybox can't hold concurrency). Mirror to your registry.
+    image: <REGISTRY>/go-httpbin:v2.15.0
+    # If the cluster has allow-zero-initial-scale=false, uncomment to start with 1 pod:
+    # initialScale: "1"
+  scale:
+    enabled: true
+    oneshot: false      # set true to fire an immediate run on install/upgrade
+    targetPods: 5
+    loadVUs: 100
+    loadDuration: "3m"
+    timeoutSeconds: 180
+    zeroWaitSeconds: 180
