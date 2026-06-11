@@ -43,10 +43,18 @@ data:
     sleep 30
     TTFB=$(curl -o /dev/null -s -w "%{time_starttransfer}" "$TARGET_URL")
     echo "TTFB: ${TTFB}s"
-    if [[ -n "${PUSHGATEWAY_URL:-}" ]]; then
+    if [[ -n "${VM_IMPORT_URL:-}" ]]; then
+      printf "capp_cold_start_ttfb_seconds %s\n" "$TTFB" | \
+        curl -s --data-binary @- \
+          "${VM_IMPORT_URL}/api/v1/import/prometheus?extra_label=job=capp_cold_start&extra_label=capp=${KSVC_NAME}"
+    elif [[ -n "${PUSHGATEWAY_URL:-}" ]]; then
       printf "capp_cold_start_ttfb_seconds %s\n" "$TTFB" | \
         curl --data-binary @- "${PUSHGATEWAY_URL}/metrics/job/capp_cold_start"
     fi
     kubectl annotate ksvc "$KSVC_NAME" -n "$KSVC_NAMESPACE" \
       autoscaling.knative.dev/min-scale=1 --overwrite
+  load.js: |
+{{ .Files.Get "files/scale/load.js" | indent 4 }}
+  scale-test.sh: |
+{{ .Files.Get "files/scale/scale-test.sh" | indent 4 }}
 {{- end }}

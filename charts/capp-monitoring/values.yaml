@@ -34,11 +34,23 @@ benchmarks:
   image:
     repository: ghcr.io/dana-team/capp-benchmark-runner
     tag: "0.1.0"
-  targetUrl: ""          # Required: e.g. http://my-app.capp-system.svc.cluster.local
-  knativeService: ""     # Required: Knative service name for cold-start test
+  # targetUrl / knativeService are auto-derived from testCapp when testCapp.enabled=true.
+  targetUrl: ""          # Override: e.g. http://my-app.capp-system.svc.cluster.local
+  knativeService: ""     # Override: Knative service name for the scale/cold-start tests
   knativeNamespace: capp-system
   prometheus:
-    remoteWriteUrl: ""   # Optional: Prometheus remote-write URL
-  pushgatewayUrl: ""     # Optional: Pushgateway URL for cold-start TTFB metric
+    remoteWriteUrl: ""   # Optional: VictoriaMetrics remote-write URL for k6 metrics (…/api/v1/write)
+  pushgatewayUrl: ""     # Optional: Pushgateway URL (legacy cold-start path)
+  victoriametrics:
+    importUrl: ""        # VM base URL for synthetic scale metrics, e.g. http://vmsingle-…:8429
+  # Test Capp — system-under-test, deployed in the release namespace.
+  testCapp:
+    enabled: true
+    image: mccutchen/go-httpbin:v2.15.0  # delay-capable; mirror to your internal registry
+  # Scale-behaviour benchmark thresholds/inputs.
+  scale:
+    enabled: true
+    oneshot: false       # set true to run an immediate scale test (self-cleans)
+    targetPods: 5
   job:
     enabled: false
