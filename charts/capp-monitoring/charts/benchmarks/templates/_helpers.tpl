@@ -15,9 +15,9 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end -}}
 - name: TARGET_URL
   value: {{ $target | quote }}
-- name: KSVC_NAME
+- name: CAPP_NAME
   value: {{ $ksvc | quote }}
-- name: KSVC_NAMESPACE
+- name: CAPP_NAMESPACE
   value: {{ $ns | quote }}
 {{- $urls := .Values.victoriametrics.importUrls | default (list) }}
 {{- if and (empty $urls) .Values.victoriametrics.importUrl }}

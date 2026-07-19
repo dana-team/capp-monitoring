@@ -37,6 +37,7 @@ benchmarks:
   # targetUrl / knativeService are auto-derived from testCapp when testCapp.enabled=true.
   targetUrl: ""          # Override: e.g. http://my-app.capp-system.svc.cluster.local
   knativeService: ""     # Override: Knative service name for the scale/cold-start tests
+  cappName: ""           # Override: Capp name for cold-start test
   knativeNamespace: capp-system
   prometheus:
     remoteWriteUrl: ""   # Optional: VictoriaMetrics remote-write URL for k6 metrics (.../api/v1/write)

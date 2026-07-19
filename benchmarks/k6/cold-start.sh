@@ -1,24 +1,21 @@
 #!/usr/bin/env bash
-# cold-start.sh — scales a Knative service to zero, then fires a request
+# cold-start.sh — scales a Capp to zero, then fires a request
 # and measures TTFB. Pushes result to Prometheus pushgateway if configured.
 set -euo pipefail
 
-KSVC_NAME="${KSVC_NAME:-}"
-KSVC_NAMESPACE="${KSVC_NAMESPACE:-capp-system}"
+CAPP_NAME="${CAPP_NAME:-}"
+CAPP_NAMESPACE="${CAPP_NAMESPACE:-capp-system}"
 TARGET_URL="${TARGET_URL:-}"
 PUSHGATEWAY_URL="${PUSHGATEWAY_URL:-}"
 
-if [[ -z "$KSVC_NAME" || -z "$TARGET_URL" ]]; then
-  echo "ERROR: KSVC_NAME and TARGET_URL must be set" >&2
+if [[ -z "$CAPP_NAME" || -z "$TARGET_URL" ]]; then
+  echo "ERROR: CAPP_NAME and TARGET_URL must be set" >&2
   exit 1
 fi
 
-echo "==> Scaling $KSVC_NAME to zero..."
-kubectl annotate ksvc "$KSVC_NAME" \
-  -n "$KSVC_NAMESPACE" \
-  "autoscaling.knative.dev/initial-scale=0" \
-  "autoscaling.knative.dev/min-scale=0" \
-  --overwrite
+echo "==> Scaling Capp $CAPP_NAME to zero..."
+kubectl patch capp "$CAPP_NAME" -n "$CAPP_NAMESPACE" \
+  --type merge -p '{"spec":{"scaleSpec":{"minReplicas":0}}}'
 
 echo "==> Waiting 30s for pods to terminate..."
 sleep 30
@@ -37,9 +34,7 @@ EOF
 fi
 
 echo "==> Restoring min-scale to 1..."
-kubectl annotate ksvc "$KSVC_NAME" \
-  -n "$KSVC_NAMESPACE" \
-  "autoscaling.knative.dev/min-scale=1" \
-  --overwrite
+kubectl patch capp "$CAPP_NAME" -n "$CAPP_NAMESPACE" \
+  --type merge -p '{"spec":{"scaleSpec":{"minReplicas":1}}}'
 
 echo "Done."

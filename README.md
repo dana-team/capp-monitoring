@@ -15,7 +15,7 @@ Monitoring, observability, and benchmarking suite for [CAPP](https://github.com/
 ```bash
 helm install capp-monitoring charts/capp-monitoring \
   --set benchmarks.targetUrl=http://my-app.capp-system.svc.cluster.local \
-  --set benchmarks.knativeService=my-knative-svc \
+  --set benchmarks.cappName=my-capp \
   --set observability.grafana.alerts.datasourceUid=<your-prometheus-uid>
 ```
 
@@ -121,7 +121,7 @@ Required Helm values when `benchmarks.enabled=true`:
 ```yaml
 benchmarks:
   targetUrl: "http://my-app.capp-system.svc.cluster.local"
-  knativeService: "my-knative-svc"
+  cappName: "my-capp"
 ```
 
 ## Development
