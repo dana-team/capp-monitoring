@@ -1,4 +1,4 @@
-{{- if .Values.enabled }}
+{{- if and .Values.enabled .Values.k6.enabled }}
 apiVersion: batch/v1
 kind: CronJob
 metadata:

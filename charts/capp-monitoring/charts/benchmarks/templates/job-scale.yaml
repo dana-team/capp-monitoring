@@ -1,0 +1,35 @@
+{{- if and .Values.enabled .Values.scale.enabled .Values.scale.oneshot }}
+# One-shot scale benchmark – runs immediately rather than on the CronJob schedule.
+# Enable with --set benchmarks.scale.oneshot=true ; the Job auto-cleans after it
+# finishes (ttlSecondsAfterFinished). Does not block the helm command.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-scale-oneshot-r{{ .Release.Revision }}
+  labels: {{ include "benchmarks.labels" . | nindent 4 }}
+spec:
+  ttlSecondsAfterFinished: 600
+  backoffLimit: 1
+  template:
+    metadata:
+      labels: {{ include "benchmarks.labels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ .Release.Name }}-benchmarks
+      restartPolicy: OnFailure
+      containers:
+        - name: scale-test
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env: {{ include "benchmarks.envVars" . | nindent 12 }}
+          command:
+            - /bin/bash
+            - /scripts/scale-test.sh
+          volumeMounts:
+            - name: scripts
+              mountPath: /scripts
+      volumes:
+        - name: scripts
+          configMap:
+            name: {{ .Release.Name }}-benchmark-scripts
+            defaultMode: 0755
+{{- end }}
