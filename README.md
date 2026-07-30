@@ -1,12 +1,11 @@
 # capp-monitoring
 
-Monitoring, observability, and benchmarking suite for [CAPP](https://github.com/dana-team/container-app-operator) and Knative. Ships three components via a single Helm umbrella chart:
+Status page and automated scale benchmarking for [CAPP](https://github.com/dana-team/container-app-operator) and Knative. Ships two components via a single Helm umbrella chart:
 
 | Component | What it does |
 |---|---|
 | **status-page** | Go server that polls Kubernetes Deployment readiness and serves a live status page + JSON API + Prometheus metrics |
-| **observability** | Grafana dashboard and alert rules for CAPP SLOs; ServiceMonitors for Prometheus scraping |
-| **benchmarks** | k6, iter8, and vegeta load-test jobs as Kubernetes CronJobs |
+| **benchmarks** | Automated Knative scale-behaviour CronJob |
 
 ## Quick start
 
@@ -14,18 +13,15 @@ Monitoring, observability, and benchmarking suite for [CAPP](https://github.com/
 
 ```bash
 helm install capp-monitoring charts/capp-monitoring \
-  --set benchmarks.targetUrl=http://my-app.capp-system.svc.cluster.local \
-  --set benchmarks.knativeService=my-knative-svc \
-  --set observability.grafana.alerts.datasourceUid=<your-prometheus-uid>
+  --set benchmarks.knativeService=my-knative-svc
 ```
 
 Each sub-chart can be toggled independently:
 
 ```bash
-# Observability only
+# Benchmarks only
 helm install capp-monitoring charts/capp-monitoring \
-  --set status-page.enabled=false \
-  --set benchmarks.enabled=false
+  --set status-page.enabled=false
 ```
 
 ### Docker (status server only)
@@ -87,40 +83,14 @@ capp_component_up{component="<name>", group="<group>"} 1|0
 
 Namespaces are overridable via environment variables shown in parentheses.
 
-## Observability
-
-### Grafana alerts (SLOs)
-
-| Alert | Severity | Threshold |
-|---|---|---|
-| CAPP Availability Warning | warning | < 99.9% over 1 h |
-| CAPP Availability Critical | critical | < 99.5% over 1 h |
-| CAPP p99 Latency Warning | warning | > 500 ms over 5 m |
-| CAPP p99 Latency Critical | critical | > 1 s over 5 m |
-| Knative Cold-start p99 Warning | warning | > 3 s over 1 h |
-| Knative Cold-start p99 Critical | critical | > 8 s over 1 h |
-| Autoscaler Scale Lag Warning | warning | desired − actual > 30 pods for 5 m |
-| Autoscaler Scale Lag Critical | critical | desired − actual > 60 pods for 5 m |
-| CAPP Component Down | critical | `capp_component_up < 1` for 2 m |
-
-Alert source: [`grafana/alerts.yaml`](grafana/alerts.yaml). Dashboard source: [`grafana/dashboard.json`](grafana/dashboard.json).
-
-Set `observability.grafana.alerts.datasourceUid` in `values.yaml` to your Grafana Prometheus datasource UID before deploying.
-
 ## Benchmarks
 
-The benchmark runner image (`ghcr.io/dana-team/capp-benchmark-runner`) packages:
-
-- **k6** v0.52.0 — throughput and latency scripts in [`benchmarks/k6/`](benchmarks/k6/)
-- **vegeta** v12.13.0 — targets in [`benchmarks/vegeta/targets.txt`](benchmarks/vegeta/targets.txt)
-- **iter8** v0.17.3 — SLO validation experiment in [`benchmarks/iter8/experiment.yaml`](benchmarks/iter8/experiment.yaml)
-- **hey**, **kubectl** — cold-start TTFB script in [`benchmarks/k6/cold-start.sh`](benchmarks/k6/cold-start.sh)
+The benchmark runner image (`ghcr.io/dana-team/capp-benchmark-runner`) packages **hey** and **kubectl** on UBI9-minimal. It drives the scale-behaviour CronJob that measures cold-start latency, scale-out delay, and time-to-target-pods, pushing results to VictoriaMetrics.
 
 Required Helm values when `benchmarks.enabled=true`:
 
 ```yaml
 benchmarks:
-  targetUrl: "http://my-app.capp-system.svc.cluster.local"
   knativeService: "my-knative-svc"
 ```
 

@@ -213,9 +213,7 @@ jobs:
             helm install capp-monitoring \
               oci://ghcr.io/dana-team/helm-charts/capp-monitoring \
               --version ${{ steps.version.outputs.TAG }} \
-              --set benchmarks.targetUrl=http://my-app.capp-system.svc.cluster.local \
-              --set benchmarks.knativeService=my-knative-svc \
-              --set observability.grafana.alerts.datasourceUid=<your-prometheus-uid>
+              --set benchmarks.knativeService=my-knative-svc
             ```
 
             ### What's changed

@@ -5,28 +5,16 @@ image:
   tag: "0.1.0"
   pullPolicy: IfNotPresent
 
-# Required: URL of the service to test
-targetUrl: ""
-
 # Required for cold-start test: Knative service name and namespace
 knativeService: ""
 knativeNamespace: capp-system
-
-# Optional: Prometheus remote-write URL for k6 metrics (point at VictoriaMetrics, e.g.
-# http://vmsingle-<release>.<ns>.svc:8429/api/v1/write).
-prometheus:
-  remoteWriteUrl: ""
-
-# Optional: Prometheus pushgateway URL for cold-start TTFB metric.
-pushgatewayUrl: ""
 
 # VictoriaMetrics import endpoint(s) for pushing synthetic scale metrics.
 # Each entry is a base URL (e.g. http://vmsingle-<release>.<ns>.svc:8429).
 # The scale-test script appends /api/v1/import/prometheus to each.
 # Leave empty to skip the push.
 victoriametrics:
-  importUrl: ""          # DEPRECATED: use importUrls below
-  importUrls: []         # NEW: list of VM base URLs
+  importUrls: []
 
 # Test Capp – the system-under-test for the scale benchmark.
 testCapp:
@@ -64,17 +52,3 @@ scale:
   loadDuration: "3m"
   timeoutSeconds: 180      # max wait for scale-out before marking the run failed
   zeroWaitSeconds: 180     # max wait for idle scale-to-zero before the cold-start check
-
-# Legacy benchmarks (k6 latency + cold-start.sh cron, and the iter8 cron).
-# DISABLED by default: they send sustained traffic to the same test Capp, which
-# keeps it warm so the scale test never sees zero pods (cold-start -> NaN) and
-# the autoscaling baseline is polluted. Enable only if you point them at a
-# DIFFERENT target than the scale test's Capp.
-k6:
-  enabled: false
-iter8:
-  enabled: false
-
-schedule:
-  k6: "0 * * * *"         # hourly at :00
-  iter8: "30 * * * *"     # hourly at :30

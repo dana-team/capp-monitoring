@@ -7,11 +7,11 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- define "benchmarks.envVars" -}}
 {{- $ns := .Values.knativeNamespace -}}
 {{- $ksvc := .Values.knativeService -}}
-{{- $target := .Values.targetUrl -}}
+{{- $target := "" -}}
 {{- if .Values.testCapp.enabled -}}
   {{- $ns = .Values.testCapp.namespace | default .Release.Namespace -}}
   {{- if not $ksvc }}{{- $ksvc = .Values.testCapp.name -}}{{- end -}}
-  {{- if not $target }}{{- $target = printf "http://%s.%s.svc.cluster.local" .Values.testCapp.name $ns -}}{{- end -}}
+  {{- $target = printf "http://%s.%s.svc.cluster.local" .Values.testCapp.name $ns -}}
 {{- end -}}
 - name: TARGET_URL
   value: {{ $target | quote }}
@@ -20,20 +20,9 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 - name: KSVC_NAMESPACE
   value: {{ $ns | quote }}
 {{- $urls := .Values.victoriametrics.importUrls | default (list) }}
-{{- if and (empty $urls) .Values.victoriametrics.importUrl }}
-{{- $urls = list .Values.victoriametrics.importUrl }}
-{{- end }}
 {{- if $urls }}
 - name: VM_IMPORT_URLS
   value: {{ $urls | join "," | quote }}
-{{- end }}
-{{- if .Values.prometheus.remoteWriteUrl }}
-- name: K6_PROMETHEUS_RW_SERVER_URL
-  value: {{ .Values.prometheus.remoteWriteUrl | quote }}
-{{- end }}
-{{- if .Values.pushgatewayUrl }}
-- name: PUSHGATEWAY_URL
-  value: {{ .Values.pushgatewayUrl | quote }}
 {{- end }}
 - name: TARGET_PODS
   value: {{ .Values.scale.targetPods | quote }}

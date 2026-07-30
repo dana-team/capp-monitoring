@@ -102,13 +102,11 @@ jobs:
       - name: Lint chart
         run: |
           helm lint charts/capp-monitoring \
-            --set benchmarks.targetUrl=http://example.com \
             --set benchmarks.knativeService=test-svc
 
       - name: Template chart
         run: |
           helm template capp-monitoring charts/capp-monitoring \
-            --set benchmarks.targetUrl=http://example.com \
             --set benchmarks.knativeService=test-svc \
             > /dev/null
 
