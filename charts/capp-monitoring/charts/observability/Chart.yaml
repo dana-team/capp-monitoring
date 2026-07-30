@@ -1,5 +1,0 @@
-apiVersion: v2
-name: observability
-description: CAPP Prometheus ServiceMonitors and Grafana resources
-type: application
-version: 0.1.0
