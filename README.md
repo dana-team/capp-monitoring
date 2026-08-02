@@ -84,6 +84,10 @@ capp_component_up{component="<name>", group="<group>"} 1|0
 
 Namespaces are overridable via environment variables shown in parentheses.
 
+## SLOs
+
+SLOs for CAPP Knative workload reliability are defined in [`docs/slo.md`](docs/slo.md).
+
 ## Benchmarks
 
 The benchmark runner image (`ghcr.io/dana-team/capp-benchmark-runner`) packages:
