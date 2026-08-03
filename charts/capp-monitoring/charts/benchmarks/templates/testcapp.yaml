@@ -17,14 +17,6 @@ spec:
     minReplicas: {{ .Values.testCapp.minReplicas }}
   configurationSpec:
     template:
-      {{- if .Values.testCapp.initialScale }}
-      metadata:
-        annotations:
-          # Create the Capp with no pods so the first request is a genuine cold start.
-          # initial-scale "0" requires Knative allow-zero-initial-scale=true in
-          # config-autoscaler; if that's off, set initialScale to "1" instead.
-          autoscaling.knative.dev/initial-scale: {{ .Values.testCapp.initialScale | quote }}
-      {{- end }}
       spec:
         containers:
           - name: {{ .Values.testCapp.name }}
