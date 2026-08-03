@@ -214,7 +214,7 @@ jobs:
               oci://ghcr.io/dana-team/helm-charts/capp-monitoring \
               --version ${{ steps.version.outputs.TAG }} \
               --set benchmarks.targetUrl=http://my-app.capp-system.svc.cluster.local \
-              --set benchmarks.knativeService=my-knative-svc
+              --set benchmarks.cappName=my-capp
             ```
 
             ### What's changed

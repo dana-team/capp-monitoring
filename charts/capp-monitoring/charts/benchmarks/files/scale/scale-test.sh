@@ -11,8 +11,8 @@
 # Tools used (all in capp-benchmark-runner): bash, kubectl, curl, k6, jq.
 set -uo pipefail
 
-KSVC_NAME="${KSVC_NAME:?KSVC_NAME must be set}"
-KSVC_NAMESPACE="${KSVC_NAMESPACE:-default}"
+CAPP_NAME="${CAPP_NAME:?CAPP_NAME must be set}"
+CAPP_NAMESPACE="${CAPP_NAMESPACE:-default}"
 TARGET_URL="${TARGET_URL:?TARGET_URL must be set}"
 TARGET_PODS="${TARGET_PODS:-5}"
 TIMEOUT_SECONDS="${TIMEOUT_SECONDS:-180}"
@@ -24,8 +24,8 @@ VM_IMPORT_URLS="${VM_IMPORT_URLS:-}"
 
 # ready_pods: count of Ready pods backing the Knative service.
 ready_pods() {
-  kubectl get pods -n "$KSVC_NAMESPACE" \
-    -l serving.knative.dev/service="$KSVC_NAME" \
+  kubectl get pods -n "$CAPP_NAMESPACE" \
+    -l serving.knative.dev/service="$CAPP_NAME" \
     -o jsonpath='{range .items[*]}{.status.conditions[?(@.type=="Ready")].status}{"\n"}{end}' 2>/dev/null \
     | grep -c "True" || true
 }
@@ -34,7 +34,7 @@ ready_pods() {
 # Do NOT annotate the ksvc directly: the operator owns it and Knative rejects
 # autoscaling annotations on the Service's top-level metadata. We just confirm the
 # service is at zero; if it isn't, the cold-start metric is skipped (not faked).
-echo "==> Confirming $KSVC_NAME is at zero pods (wait up to ${ZERO_WAIT_SECONDS}s)..."
+echo "==> Confirming $CAPP_NAME is at zero pods (wait up to ${ZERO_WAIT_SECONDS}s)..."
 zero_deadline=$(( $(date +%s) + ZERO_WAIT_SECONDS ))
 while [ "$(ready_pods)" -ne 0 ] && [ "$(date +%s)" -lt "$zero_deadline" ]; do
   sleep 5
@@ -104,7 +104,7 @@ METRICS=$(mktemp)
 for url in "${VM_URLS[@]}"; do
   echo "==> Pushing metrics to VictoriaMetrics ($url)..."
   curl -s --data-binary @"$METRICS" \
-    "${url}/api/v1/import/prometheus?extra_label=capp=${KSVC_NAME}&extra_label=namespace=${KSVC_NAMESPACE}"
+    "${url}/api/v1/import/prometheus?extra_label=capp=${CAPP_NAME}&extra_label=namespace=${CAPP_NAMESPACE}"
   echo "    done."
 done
 rm -f "$METRICS"
