@@ -15,6 +15,9 @@ coverage.out
 # Worktrees
 .worktrees/
 
+# Helm
+Chart.lock
+
 # Editor
 .idea/
 .vscode/

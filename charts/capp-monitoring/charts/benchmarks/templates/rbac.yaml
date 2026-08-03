@@ -11,10 +11,12 @@ metadata:
   name: {{ .Release.Name }}-benchmarks
   labels: {{ include "benchmarks.labels" . | nindent 4 }}
 rules:
+  - apiGroups: ["rcs.dana.io"]
+    resources: ["capps"]
+    verbs: ["get", "patch"]
   - apiGroups: ["serving.knative.dev"]
     resources: ["services"]
     verbs: ["get", "patch", "update"]
-  # The scale-test harness counts Ready pods to time scale-out events.
   - apiGroups: [""]
     resources: ["pods"]
     verbs: ["get", "list"]

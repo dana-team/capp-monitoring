@@ -8,8 +8,8 @@ image:
 # Required: URL of the service to test
 targetUrl: ""
 
-# Required for cold-start test: Knative service name and namespace
-knativeService: ""
+# Required for cold-start test: Capp name and namespace
+cappName: ""
 knativeNamespace: capp-system
 
 # Optional: Prometheus remote-write URL for k6 metrics (point at VictoriaMetrics, e.g.
