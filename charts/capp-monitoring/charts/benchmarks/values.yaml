@@ -46,10 +46,6 @@ testCapp:
   # CappConfig (default 10/pod) and is NOT settable per-Capp.
   metric: concurrency
   minReplicas: 0         # keep scale-to-zero so cold-start can be measured
-  # Initial replica count at creation. "0" = no pod on create (genuine cold start),
-  # but requires Knative allow-zero-initial-scale=true. If that's not permitted on
-  # the cluster, set this to "1" (the harness then waits for idle scale-to-zero).
-  initialScale: "0"
 
 # Scale-behaviour benchmark settings.
 scale:
