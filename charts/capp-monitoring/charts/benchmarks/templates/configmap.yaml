@@ -48,7 +48,7 @@ data:
       for url in "${VM_URLS[@]}"; do
         printf "capp_cold_start_ttfb_seconds %s\n" "$TTFB" | \
           curl -s --data-binary @- \
-            "${url}/api/v1/import/prometheus?extra_label=job=capp_cold_start&extra_label=capp=${KSVC_NAME}"
+            "${url}/api/v1/import/prometheus?extra_label=job=capp_cold_start&extra_label=capp=${CAPP_NAME}"
       done
     elif [[ -n "${PUSHGATEWAY_URL:-}" ]]; then
       printf "capp_cold_start_ttfb_seconds %s\n" "$TTFB" | \

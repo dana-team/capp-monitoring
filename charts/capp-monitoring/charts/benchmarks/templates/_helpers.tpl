@@ -5,18 +5,18 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}
 
 {{- define "benchmarks.envVars" -}}
-{{- $ns := .Values.knativeNamespace -}}
-{{- $ksvc := .Values.knativeService -}}
+{{- $ns := .Values.cappNamespace -}}
+{{- $capp := .Values.cappName -}}
 {{- $target := .Values.targetUrl -}}
 {{- if .Values.testCapp.enabled -}}
   {{- $ns = .Values.testCapp.namespace | default .Release.Namespace -}}
-  {{- if not $ksvc }}{{- $ksvc = .Values.testCapp.name -}}{{- end -}}
+  {{- if not $capp }}{{- $capp = .Values.testCapp.name -}}{{- end -}}
   {{- if not $target }}{{- $target = printf "http://%s.%s.svc.cluster.local" .Values.testCapp.name $ns -}}{{- end -}}
 {{- end -}}
 - name: TARGET_URL
   value: {{ $target | quote }}
 - name: CAPP_NAME
-  value: {{ $ksvc | quote }}
+  value: {{ $capp | quote }}
 - name: CAPP_NAMESPACE
   value: {{ $ns | quote }}
 {{- $urls := .Values.victoriametrics.importUrls | default (list) }}

@@ -10,7 +10,7 @@ targetUrl: ""
 
 # Required for cold-start test: Capp name and namespace
 cappName: ""
-knativeNamespace: capp-system
+cappNamespace: capp-system
 
 # Optional: Prometheus remote-write URL for k6 metrics (point at VictoriaMetrics, e.g.
 # http://vmsingle-<release>.<ns>.svc:8429/api/v1/write).
