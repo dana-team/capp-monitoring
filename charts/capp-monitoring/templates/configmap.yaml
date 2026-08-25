@@ -3,7 +3,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: {{ .Release.Name }}-benchmark-scripts
-  labels: {{ include "benchmarks.labels" . | nindent 4 }}
+  labels: {{ include "capp-monitoring.labels" . | nindent 4 }}
 data:
   latency.js: |
     import http from 'k6/http';

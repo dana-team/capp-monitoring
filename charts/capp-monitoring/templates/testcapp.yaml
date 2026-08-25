@@ -6,7 +6,7 @@ kind: Capp
 metadata:
   name: {{ .Values.testCapp.name }}
   namespace: {{ .Values.testCapp.namespace | default .Release.Namespace }}
-  labels: {{ include "benchmarks.labels" . | nindent 4 }}
+  labels: {{ include "capp-monitoring.labels" . | nindent 4 }}
 spec:
   state: enabled
   # Capp-native autoscaling. The target value (concurrency per pod) is taken from

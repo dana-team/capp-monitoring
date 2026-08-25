@@ -6,13 +6,13 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: {{ .Release.Name }}-scale-oneshot-r{{ .Release.Revision }}
-  labels: {{ include "benchmarks.labels" . | nindent 4 }}
+  labels: {{ include "capp-monitoring.labels" . | nindent 4 }}
 spec:
   ttlSecondsAfterFinished: 600
   backoffLimit: 1
   template:
     metadata:
-      labels: {{ include "benchmarks.labels" . | nindent 8 }}
+      labels: {{ include "capp-monitoring.labels" . | nindent 8 }}
     spec:
       serviceAccountName: {{ .Release.Name }}-benchmarks
       restartPolicy: OnFailure
@@ -20,7 +20,7 @@ spec:
         - name: scale-test
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          env: {{ include "benchmarks.envVars" . | nindent 12 }}
+          env: {{ include "capp-monitoring.envVars" . | nindent 12 }}
           command:
             - /bin/bash
             - /scripts/scale-test.sh

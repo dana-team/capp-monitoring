@@ -1,10 +1,10 @@
-{{- define "benchmarks.labels" -}}
-app.kubernetes.io/name: benchmarks
+{{- define "capp-monitoring.labels" -}}
+app.kubernetes.io/name: {{ .Chart.Name }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}
 
-{{- define "benchmarks.envVars" -}}
+{{- define "capp-monitoring.envVars" -}}
 {{- $ns := .Values.cappNamespace -}}
 {{- $capp := .Values.cappName -}}
 {{- $target := .Values.targetUrl -}}

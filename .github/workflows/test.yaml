@@ -31,20 +31,17 @@ jobs:
         with:
           version: v3.17.0
 
-      - name: Build chart dependencies
-        run: helm dependency update charts/capp-monitoring
-
       - name: Lint chart
         run: |
           helm lint charts/capp-monitoring \
-            --set benchmarks.targetUrl=http://example.com \
-            --set benchmarks.cappName=test-svc
+            --set targetUrl=http://example.com \
+            --set cappName=test-svc
 
       - name: Template chart
         run: |
           helm template capp-monitoring charts/capp-monitoring \
-            --set benchmarks.targetUrl=http://example.com \
-            --set benchmarks.cappName=test-svc \
+            --set targetUrl=http://example.com \
+            --set cappName=test-svc \
             > /dev/null
 
   # ── Docker: build check (no push) ────────────────────────────────────────────

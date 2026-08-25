@@ -3,7 +3,7 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: {{ .Release.Name }}-benchmark-ondemand-{{ now | unixEpoch }}
-  labels: {{ include "benchmarks.labels" . | nindent 4 }}
+  labels: {{ include "capp-monitoring.labels" . | nindent 4 }}
   annotations:
     "helm.sh/hook": post-install,post-upgrade
     "helm.sh/hook-weight": "0"
@@ -11,7 +11,7 @@ metadata:
 spec:
   template:
     metadata:
-      labels: {{ include "benchmarks.labels" . | nindent 8 }}
+      labels: {{ include "capp-monitoring.labels" . | nindent 8 }}
     spec:
       serviceAccountName: {{ .Release.Name }}-benchmarks
       restartPolicy: OnFailure
@@ -19,7 +19,7 @@ spec:
         - name: benchmark
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          env: {{ include "benchmarks.envVars" . | nindent 12 }}
+          env: {{ include "capp-monitoring.envVars" . | nindent 12 }}
           command:
             - /bin/bash
             - -c

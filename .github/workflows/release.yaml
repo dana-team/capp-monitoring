@@ -95,9 +95,6 @@ jobs:
           sed -i "s/^version:.*/version: ${{ steps.version.outputs.CHART_VERSION }}/" charts/${{ env.CHART_NAME }}/Chart.yaml
           sed -i "s/^appVersion:.*/appVersion: \"${{ steps.version.outputs.VERSION }}\"/" charts/${{ env.CHART_NAME }}/Chart.yaml
 
-      - name: Build chart dependencies
-        run: helm dependency build charts/${{ env.CHART_NAME }}
-
       - name: Log in to GHCR
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | \
@@ -165,8 +162,8 @@ jobs:
             helm install capp-monitoring \
               oci://ghcr.io/dana-team/helm-charts/capp-monitoring \
               --version ${{ steps.version.outputs.TAG }} \
-              --set benchmarks.targetUrl=http://my-app.capp-system.svc.cluster.local \
-              --set benchmarks.cappName=my-capp
+              --set targetUrl=http://my-app.capp-system.svc.cluster.local \
+              --set cappName=my-capp
             ```
 
             ### What's changed
