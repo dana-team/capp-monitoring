@@ -1,7 +1,6 @@
 # Binaries
 bin/
 *.exe
-capp-status-server
 
 # Go build artifacts
 *.o

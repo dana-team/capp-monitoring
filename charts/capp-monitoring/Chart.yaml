@@ -1,15 +1,11 @@
 apiVersion: v2
 name: capp-monitoring
 description: >
-  Monitoring and benchmarking suite for CAPP and Knative.
-  Includes a status page and automated load tests.
+  Benchmarking suite for CAPP and Knative.
 type: application
 version: 0.1.0
 appVersion: "0.1.0"
 dependencies:
-  - name: status-page
-    version: "0.1.0"
-    condition: "status-page.enabled"
   - name: benchmarks
     version: "0.1.0"
     condition: "benchmarks.enabled"
