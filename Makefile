@@ -1,16 +1,6 @@
-.PHONY: build test lint helm-lint docker-build
+.PHONY: helm-lint docker-build
 
-BINARY := capp-status-server
-IMAGE  ?= ghcr.io/dana-team/capp-status-server:latest
-
-build:
-	go build -o $(BINARY) ./cmd/status-server
-
-test:
-	go test -v -race ./...
-
-lint:
-	golangci-lint run ./...
+IMAGE ?= ghcr.io/dana-team/capp-benchmark-runner:latest
 
 helm-lint:
 	helm lint charts/capp-monitoring
