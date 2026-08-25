@@ -1,6 +1,6 @@
 # capp-monitoring
 
-Benchmarking suite for [CAPP](https://github.com/dana-team/container-app-operator) and Knative. Ships as a single Helm umbrella chart with k6, iter8, and vegeta load-test jobs as Kubernetes CronJobs.
+Benchmarking suite for [CAPP](https://github.com/dana-team/container-app-operator) and Knative. Ships as a single Helm chart with k6, iter8, and vegeta load-test jobs as Kubernetes CronJobs.
 
 ## Quick start
 
@@ -8,8 +8,8 @@ Benchmarking suite for [CAPP](https://github.com/dana-team/container-app-operato
 
 ```bash
 helm install capp-monitoring charts/capp-monitoring \
-  --set benchmarks.targetUrl=http://my-app.capp-system.svc.cluster.local \
-  --set benchmarks.cappName=my-capp
+  --set targetUrl=http://my-app.capp-system.svc.cluster.local \
+  --set cappName=my-capp
 ```
 
 ## SLOs
@@ -25,12 +25,11 @@ The benchmark runner image (`ghcr.io/dana-team/capp-benchmark-runner`) packages:
 - **iter8** v0.17.3 — SLO validation experiment in [`benchmarks/iter8/experiment.yaml`](benchmarks/iter8/experiment.yaml)
 - **hey**, **kubectl** — cold-start TTFB script in [`benchmarks/k6/cold-start.sh`](benchmarks/k6/cold-start.sh)
 
-Required Helm values when `benchmarks.enabled=true`:
+Required Helm values:
 
 ```yaml
-benchmarks:
-  targetUrl: "http://my-app.capp-system.svc.cluster.local"
-  cappName: "my-capp"
+targetUrl: "http://my-app.capp-system.svc.cluster.local"
+cappName: "my-capp"
 ```
 
 ## Development
