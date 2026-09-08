@@ -1,6 +1,6 @@
 {{- if and .Values.enabled .Values.scale.enabled .Values.scale.oneshot }}
 # One-shot scale benchmark – runs immediately rather than on the CronJob schedule.
-# Enable with --set benchmarks.scale.oneshot=true ; the Job auto-cleans after it
+# Enable with --set scale.oneshot=true ; the Job auto-cleans after it
 # finishes (ttlSecondsAfterFinished). Does not block the helm command.
 apiVersion: batch/v1
 kind: Job
