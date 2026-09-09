@@ -1,4 +1,4 @@
-{{- if and .Values.enabled .Values.job.enabled }}
+{{- if and .Values.enabled .Values.oneshot.enabled }}
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -19,12 +19,16 @@ spec:
         - name: benchmark
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- if include "capp-monitoring.oneshotUsesLatencyCapp" . }}
+          env: {{ include "capp-monitoring.latencyEnvVars" . | nindent 12 }}
+          {{- else }}
           env: {{ include "capp-monitoring.envVars" . | nindent 12 }}
+          {{- end }}
           command:
             - /bin/bash
             - -c
             - |
-              case "{{ .Values.job.type }}" in
+              case "{{ .Values.oneshot.type }}" in
                 k6-latency)   k6 run /scripts/latency.js ;;
                 k6-throughput) k6 run /scripts/throughput.js ;;
                 cold-start)   bash /scripts/cold-start.sh ;;
@@ -39,7 +43,7 @@ spec:
                   iter8 k report
                   iter8 k assert -c completed -c nofailure -c slos
                   ;;
-                *) echo "Unknown benchmark type: {{ .Values.job.type }}"; exit 1 ;;
+                *) echo "Unknown benchmark type: {{ .Values.oneshot.type }}"; exit 1 ;;
               esac
           volumeMounts:
             - name: scripts

@@ -1,6 +1,6 @@
 {{- if and .Values.enabled .Values.testCapp.enabled }}
-# Test.Capp – the system-under-test the scale benchmark drives load against.
-# Deployed into the release namespace alongside the benchmark tooling.
+# Test Capp – the system-under-test for the scale benchmark.
+# Deployed with minReplicas=0 so cold-start can be measured.
 apiVersion: rcs.dana.io/v1alpha1
 kind: Capp
 metadata:
@@ -9,9 +9,6 @@ metadata:
   labels: {{ include "capp-monitoring.labels" . | nindent 4 }}
 spec:
   state: enabled
-  # Capp-native autoscaling. The target value (concurrency per pod) is taken from
-  # the cluster CappConfig (default 10), not set here. minReplicas=0 keeps
-  # scale-to-zero; the operator then sets activation-scale from CappConfig.
   scaleSpec:
     metric: {{ .Values.testCapp.metric | quote }}
     minReplicas: {{ .Values.testCapp.minReplicas }}
@@ -20,6 +17,34 @@ spec:
       spec:
         containers:
           - name: {{ .Values.testCapp.name }}
+            image: {{ .Values.testCapp.image | quote }}
+            {{- with .Values.testCapp.command }}
+            command: {{ toYaml . | nindent 14 }}
+            {{- end }}
+            ports:
+              - containerPort: {{ .Values.testCapp.port }}
+{{- end }}
+{{- if and .Values.enabled (or .Values.latency.enabled (include "capp-monitoring.oneshotUsesLatencyCapp" .)) }}
+---
+# Latency Capp – dedicated system-under-test for the latency benchmark.
+# Runs with minReplicas=1 (always warm) so it doesn't interfere with the
+# scale benchmark's cold-start measurement.
+apiVersion: rcs.dana.io/v1alpha1
+kind: Capp
+metadata:
+  name: {{ .Values.latency.testCapp.name }}
+  namespace: {{ .Values.testCapp.namespace | default .Release.Namespace }}
+  labels: {{ include "capp-monitoring.labels" . | nindent 4 }}
+spec:
+  state: enabled
+  scaleSpec:
+    metric: {{ .Values.testCapp.metric | quote }}
+    minReplicas: 1
+  configurationSpec:
+    template:
+      spec:
+        containers:
+          - name: {{ .Values.latency.testCapp.name }}
             image: {{ .Values.testCapp.image | quote }}
             {{- with .Values.testCapp.command }}
             command: {{ toYaml . | nindent 14 }}

@@ -5,7 +5,7 @@ metadata:
   name: {{ .Release.Name }}-benchmark-iter8
   labels: {{ include "capp-monitoring.labels" . | nindent 4 }}
 spec:
-  schedule: {{ .Values.schedule.iter8 | quote }}
+  schedule: {{ .Values.iter8.schedule | quote }}
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 3
