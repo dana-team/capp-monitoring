@@ -44,6 +44,27 @@ jobs:
             --set cappName=test-svc \
             > /dev/null
 
+      - name: Template chart (latency and oneshot)
+        run: |
+          helm template capp-monitoring charts/capp-monitoring \
+            --show-only templates/cronjob-k6.yaml \
+            --set latency.enabled=true \
+            | grep -q 'name: capp-monitoring-benchmark-latency'
+          helm template capp-monitoring charts/capp-monitoring \
+            --show-only templates/testcapp.yaml \
+            --set latency.enabled=true \
+            | grep -q 'name: capp-latency-test'
+          helm template capp-monitoring charts/capp-monitoring \
+            --show-only templates/job.yaml \
+            --set oneshot.enabled=true \
+            --set oneshot.type=k6-latency \
+            | grep -q 'capp-latency-test'
+          helm template capp-monitoring charts/capp-monitoring \
+            --show-only templates/testcapp.yaml \
+            --set oneshot.enabled=true \
+            --set oneshot.type=k6-latency \
+            | grep -q 'name: capp-latency-test'
+
   # ── Docker: build check (no push) ────────────────────────────────────────────
   docker-build:
     name: Docker build (no push)

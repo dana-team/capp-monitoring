@@ -1,11 +1,11 @@
-{{- if and .Values.enabled .Values.k6.enabled }}
+{{- if and .Values.enabled .Values.latency.enabled }}
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: {{ .Release.Name }}-benchmark-k6
+  name: {{ .Release.Name }}-benchmark-latency
   labels: {{ include "capp-monitoring.labels" . | nindent 4 }}
 spec:
-  schedule: {{ .Values.schedule.k6 | quote }}
+  schedule: {{ .Values.latency.schedule | quote }}
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 3
@@ -21,7 +21,7 @@ spec:
             - name: k6
               image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
               imagePullPolicy: {{ .Values.image.pullPolicy }}
-              env: {{ include "capp-monitoring.envVars" . | nindent 16 }}
+              env: {{ include "capp-monitoring.latencyEnvVars" . | nindent 16 }}
               command:
                 - /bin/bash
                 - -c
@@ -29,7 +29,7 @@ spec:
                   echo "==> Running cold-start test..."
                   bash /scripts/cold-start.sh
                   echo "==> Running latency test..."
-                  {{- if .Values.prometheus.remoteWriteUrl }}
+                  {{- if .Values.victoriametrics.importUrls }}
                   k6 run --out experimental-prometheus-rw /scripts/latency.js
                   {{- else }}
                   k6 run /scripts/latency.js
