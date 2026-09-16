@@ -14,7 +14,7 @@ data:
     };
     const BASE_URL = __ENV.TARGET_URL || 'http://localhost:8080';
     export default function () {
-      const res = http.get(`${BASE_URL}/healthz`);
+      const res = http.get(`${BASE_URL}/get`);
       check(res, { 'status 200': (r) => r.status === 200 });
       sleep(0.1);
     }
@@ -32,7 +32,7 @@ data:
     };
     const BASE_URL = __ENV.TARGET_URL || 'http://localhost:8080';
     export default function () {
-      const res = http.get(`${BASE_URL}/healthz`);
+      const res = http.get(`${BASE_URL}/get`);
       check(res, { 'status 200': (r) => r.status === 200 });
     }
   cold-start.sh: |
