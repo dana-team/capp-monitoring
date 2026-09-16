@@ -5,3 +5,8 @@ description: >
 type: application
 version: 0.1.0
 appVersion: "0.1.0"
+
+dependencies:
+  - name: kube-state-metrics
+    version: "8.4.2"
+    condition: kube-state-metrics.enabled

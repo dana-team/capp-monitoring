@@ -87,3 +87,61 @@ oneshot:
   enabled: false
   # -- Benchmark type to run (k6-latency | k6-throughput | cold-start | iter8)
   type: ""
+
+# CRS-only kube-state-metrics instance for Capp Ready condition metrics.
+kube-state-metrics:
+  # -- Deploy the kube-state-metrics subchart
+  enabled: true
+
+  # Run only custom-resource-state collectors (no built-in resource metrics).
+  extraArgs:
+    - --custom-resource-state-only=true
+
+  rbac:
+    extraRules:
+      - apiGroups: ["rcs.dana.io"]
+        resources: ["capps"]
+        verbs: ["list", "watch"]
+
+  # Scraped by in-cluster Prometheus via ServiceMonitor (requires user workload monitoring on OCP).
+  prometheus:
+    monitor:
+      enabled: true
+
+  customResourceState:
+    enabled: true
+    config:
+      kind: CustomResourceStateMetrics
+      spec:
+        resources:
+          - groupVersionKind:
+              group: rcs.dana.io
+              version: v1alpha1
+              kind: Capp
+            metricNamePrefix: capp
+            labelsFromPath:
+              name: [metadata, name]
+              namespace: [metadata, namespace]
+              state: [spec, state]
+            metrics:
+              # Capp Ready condition gauge: 1 = True, 0 = False.
+              - name: ready
+                help: "Capp Ready condition; 1 = True, 0 = False."
+                each:
+                  type: Gauge
+                  gauge:
+                    path: [status, conditions, "[type=Ready]"]
+                    valueFrom: [status]
+                    labelsFromPath:
+                      status: [status]
+                      reason: [reason]
+              # Unix timestamp of the last Ready condition transition.
+              - name: ready_last_transition_timestamp_seconds
+                help: "Unix timestamp of the last Ready condition transition."
+                each:
+                  type: Gauge
+                  gauge:
+                    path: [status, conditions, "[type=Ready]"]
+                    valueFrom: [lastTransitionTime]
+                    labelsFromPath:
+                      status: [status]
