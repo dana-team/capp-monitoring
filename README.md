@@ -16,6 +16,15 @@ helm install capp-monitoring charts/capp-monitoring \
 
 SLOs for CAPP Knative workload reliability are defined in [`docs/slo.md`](docs/slo.md).
 
+## Capp readiness metrics (`kube-state-metrics.enabled`)
+
+A [kube-state-metrics](https://github.com/kubernetes/kube-state-metrics) subchart exposes Capp Ready condition metrics for Prometheus / Grafana.
+
+| Metric | Description |
+|--------|-------------|
+| `capp_ready` | Capp Ready condition; 1 = True, 0 = False. Labels: `namespace`, `name`, `state`, `status`, `reason` |
+| `capp_ready_last_transition_timestamp_seconds` | Unix timestamp of the last Ready condition transition. Labels: `namespace`, `name`, `state`, `status` |
+
 ## Benchmarks
 
 Each benchmark runs as a Kubernetes CronJob. Enable them independently via Helm values. Metrics are pushed to VictoriaMetrics when `victoriametrics.importUrls` is set. Cold-start time to first byte can alternatively use `pushgatewayUrl`.
