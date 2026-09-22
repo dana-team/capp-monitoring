@@ -70,6 +70,8 @@ latency:
   enabled: false
   # -- Cron schedule
   schedule: "0 * * * *"
+  # -- HTTP path the latency test hits (/delay/N adds artificial app delay in seconds)
+  path: "/delay/0.05"
   testCapp:
     # -- Latency Capp resource name
     name: capp-latency-test

@@ -74,4 +74,6 @@ Env vars for the latency benchmark — targets latency.testCapp instead of testC
 - name: PUSHGATEWAY_URL
   value: {{ .Values.pushgatewayUrl | quote }}
 {{- end }}
+- name: LATENCY_PATH
+  value: {{ .Values.latency.path | quote }}
 {{- end }}

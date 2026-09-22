@@ -13,8 +13,9 @@ data:
       thresholds: { http_req_duration: ['p(99)<500'], http_req_failed: ['rate<0.01'] },
     };
     const BASE_URL = __ENV.TARGET_URL || 'http://localhost:8080';
+    const LATENCY_PATH = __ENV.LATENCY_PATH || '/delay/0.05';
     export default function () {
-      const res = http.get(`${BASE_URL}/get`);
+      const res = http.get(`${BASE_URL}${LATENCY_PATH}`);
       check(res, { 'status 200': (r) => r.status === 200 });
       sleep(0.1);
     }
