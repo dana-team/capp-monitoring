@@ -1,3 +1,36 @@
+{{/*
+Validate extraLabels keys and values for safe use in URLs and CLI args.
+Keys must be valid Prometheus label names; values must be alphanumeric (plus _ . -).
+*/}}
+{{- define "capp-monitoring.validateExtraLabels" -}}
+{{- range $k, $v := .Values.extraLabels -}}
+{{- if not (regexMatch "^[a-zA-Z_][a-zA-Z0-9_]*$" $k) -}}
+{{- fail (printf "extraLabels key %q is invalid: must match [a-zA-Z_][a-zA-Z0-9_]*" $k) -}}
+{{- end -}}
+{{- if not (regexMatch "^[a-zA-Z0-9_.-]*$" ($v | toString)) -}}
+{{- fail (printf "extraLabels value %q for key %q is invalid: must match [a-zA-Z0-9_.-]*" ($v | toString) $k) -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Build VM import extra_label query params from extraLabels.
+*/}}
+{{- define "capp-monitoring.extraLabelsQuery" -}}
+{{- include "capp-monitoring.validateExtraLabels" . -}}
+{{- range $k, $v := .Values.extraLabels -}}
+&extra_label={{ $k }}={{ $v }}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Build k6 --tag flags from extraLabels.
+*/}}
+{{- define "capp-monitoring.k6ExtraTags" -}}
+{{- include "capp-monitoring.validateExtraLabels" . -}}
+{{- range $k, $v := .Values.extraLabels }} --tag {{ $k }}={{ $v }}{{- end -}}
+{{- end -}}
+
 {{- define "capp-monitoring.labels" -}}
 app.kubernetes.io/name: {{ .Chart.Name }}
 app.kubernetes.io/instance: {{ .Release.Name }}
@@ -29,6 +62,10 @@ Env vars for the scale benchmark and other components that target testCapp.
 {{- if .Values.pushgatewayUrl }}
 - name: PUSHGATEWAY_URL
   value: {{ .Values.pushgatewayUrl | quote }}
+{{- end }}
+{{- if .Values.extraLabels }}
+- name: EXTRA_LABELS_QUERY
+  value: {{ include "capp-monitoring.extraLabelsQuery" . | quote }}
 {{- end }}
 - name: TARGET_PODS
   value: {{ .Values.scale.targetPods | quote }}
@@ -73,6 +110,10 @@ Env vars for the latency benchmark — targets latency.testCapp instead of testC
 {{- if .Values.pushgatewayUrl }}
 - name: PUSHGATEWAY_URL
   value: {{ .Values.pushgatewayUrl | quote }}
+{{- end }}
+{{- if .Values.extraLabels }}
+- name: EXTRA_LABELS_QUERY
+  value: {{ include "capp-monitoring.extraLabelsQuery" . | quote }}
 {{- end }}
 - name: LATENCY_PATH
   value: {{ .Values.latency.path | quote }}
