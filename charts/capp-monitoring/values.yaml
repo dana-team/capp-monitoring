@@ -17,6 +17,11 @@ cappName: ""
 # -- Capp namespace (used when testCapp.enabled=false)
 cappNamespace: capp-system
 
+# -- Extra labels injected into all pushed metrics (VM import and k6 remote write).
+# Useful for distinguishing clusters/environments in multi-cluster deployments.
+# Example: { cluster: "prod-1", environment: "production" }
+extraLabels: {}
+
 # -- Prometheus pushgateway URL for cold-start TTFB metric
 pushgatewayUrl: ""
 
@@ -70,6 +75,8 @@ latency:
   enabled: false
   # -- Cron schedule
   schedule: "0 * * * *"
+  # -- HTTP path the latency test hits (/delay/N adds artificial app delay in seconds)
+  path: "/delay/0.05"
   testCapp:
     # -- Latency Capp resource name
     name: capp-latency-test

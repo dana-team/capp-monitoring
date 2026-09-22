@@ -30,7 +30,7 @@ spec:
                   bash /scripts/cold-start.sh
                   echo "==> Running latency test..."
                   {{- if .Values.victoriametrics.importUrls }}
-                  k6 run --out experimental-prometheus-rw /scripts/latency.js
+                  k6 run --out experimental-prometheus-rw{{ include "capp-monitoring.k6ExtraTags" . }} /scripts/latency.js
                   {{- else }}
                   k6 run /scripts/latency.js
                   {{- end }}

@@ -104,7 +104,7 @@ METRICS=$(mktemp)
 for url in "${VM_URLS[@]}"; do
   echo "==> Pushing metrics to VictoriaMetrics ($url)..."
   curl -s --data-binary @"$METRICS" \
-    "${url}/api/v1/import/prometheus?extra_label=capp=${CAPP_NAME}&extra_label=namespace=${CAPP_NAMESPACE}"
+    "${url}/api/v1/import/prometheus?extra_label=capp=${CAPP_NAME}&extra_label=namespace=${CAPP_NAMESPACE}${EXTRA_LABELS_QUERY:-}"
   echo "    done."
 done
 rm -f "$METRICS"
