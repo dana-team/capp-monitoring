@@ -1,0 +1,25 @@
+{{- if .Values.queueProxy.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ .Release.Name }}-queue-proxy
+  labels: {{ include "capp-monitoring.labels" . | nindent 4 }}
+    {{- with .Values.queueProxy.serviceMonitor.additionalLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  {{- with .Values.queueProxy.serviceMonitor.namespaceSelector }}
+  namespaceSelector: {{ toYaml . | nindent 4 }}
+  {{- end }}
+  selector:
+    matchExpressions:
+      - key: serving.knative.dev/service
+        operator: Exists
+  endpoints:
+    - port: {{ .Values.queueProxy.serviceMonitor.port }}
+      path: {{ .Values.queueProxy.serviceMonitor.path }}
+      interval: {{ .Values.queueProxy.serviceMonitor.interval }}
+      {{- with .Values.queueProxy.serviceMonitor.metricRelabelings }}
+      metricRelabelings: {{ toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
